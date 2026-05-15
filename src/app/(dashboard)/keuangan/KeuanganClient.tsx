@@ -19,6 +19,7 @@ interface Keuangan {
   keterangan: string | null
   link_nota: string | null
   input_by: string | null
+  tahun_anggaran: number | null
   created_at: string
 }
 
@@ -57,6 +58,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Keuangan | null>(null)
   const [search, setSearch] = useState('')
+  const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -69,12 +71,15 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return data.filter((d) =>
-      (d.kategori ?? '').toLowerCase().includes(q) ||
-      (d.keterangan ?? '').toLowerCase().includes(q) ||
-      d.jenis_transaksi.toLowerCase().includes(q)
-    )
-  }, [data, search])
+    return data.filter((d) => {
+      if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
+      return (
+        (d.kategori ?? '').toLowerCase().includes(q) ||
+        (d.keterangan ?? '').toLowerCase().includes(q) ||
+        d.jenis_transaksi.toLowerCase().includes(q)
+      )
+    })
+  }, [data, search, tahunFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
   const safePage = Math.min(currentPage, totalPages)
@@ -83,10 +88,10 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
     safePage * ITEMS_PER_PAGE
   )
 
-  const totalDebit = data
+  const totalDebit = filtered
     .filter((d) => d.jenis_transaksi === 'Debit')
     .reduce((sum, d) => sum + d.nominal, 0)
-  const totalKredit = data
+  const totalKredit = filtered
     .filter((d) => d.jenis_transaksi === 'Kredit')
     .reduce((sum, d) => sum + d.nominal, 0)
   const saldo = totalDebit - totalKredit
@@ -125,6 +130,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
       kategori: (form.get('kategori') as string) || null,
       nominal: Number(form.get('nominal')),
       keterangan: (form.get('keterangan') as string) || null,
+      tahun_anggaran: tahunFilter,
     }
 
     try {
@@ -166,15 +172,26 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
             <Download size={16} /> Ekspor CSV
           </a>
         </div>
-        <div className="w-full sm:w-64">
-          <SearchInput
-            value={search}
-            onChange={(v) => {
-              setSearch(v)
-              setCurrentPage(1)
-            }}
-            placeholder="Cari transaksi..."
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={tahunFilter}
+            onChange={(e) => { setTahunFilter(Number(e.target.value)); setCurrentPage(1) }}
+            className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+          >
+            {[2024, 2025, 2026, 2027].map((y) => (
+              <option key={y} value={y}>TA {y}</option>
+            ))}
+          </select>
+          <div className="w-full sm:w-64">
+            <SearchInput
+              value={search}
+              onChange={(v) => {
+                setSearch(v)
+                setCurrentPage(1)
+              }}
+              placeholder="Cari transaksi..."
+            />
+          </div>
         </div>
       </div>
 

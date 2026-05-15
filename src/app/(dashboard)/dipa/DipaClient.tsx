@@ -12,6 +12,8 @@ import { showError, showSuccess, confirmAction } from '@/lib/toast'
 interface DipaRow {
   id: string
   revisi_ke: number
+  tanggal_revisi: string | null
+  tahun_anggaran: number | null
   link_dipa: string | null
   link_rkakl: string | null
   keterangan_revisi: string | null
@@ -74,6 +76,8 @@ export default function DipaClient({
     const form = new FormData(e.currentTarget)
     const payload = {
       revisi_ke: Number(form.get('revisi_ke')),
+      tanggal_revisi: (form.get('tanggal_revisi') as string) || null,
+      tahun_anggaran: Number(form.get('tahun_anggaran')),
       link_dipa: linkDipa,
       link_rkakl: linkRkakl,
       keterangan_revisi: (form.get('keterangan_revisi') as string) || null,
@@ -216,24 +220,62 @@ export default function DipaClient({
         title={editing ? 'Ubah Revisi DIPA' : 'Upload Revisi DIPA'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor={editing ? 'edit-revisi-ke' : 'add-revisi-ke'}
+                className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+              >
+                Revisi Ke <span className="text-rose-600" aria-label="wajib diisi">*</span>
+              </label>
+              <input
+                id={editing ? 'edit-revisi-ke' : 'add-revisi-ke'}
+                type="number"
+                name="revisi_ke"
+                defaultValue={editing?.revisi_ke ?? 0}
+                required
+                aria-required="true"
+                min={0}
+                placeholder="0"
+                className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor={editing ? 'edit-tanggal-revisi' : 'add-tanggal-revisi'}
+                className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+              >
+                Tanggal Revisi <span className="text-rose-600" aria-label="wajib diisi">*</span>
+              </label>
+              <input
+                id={editing ? 'edit-tanggal-revisi' : 'add-tanggal-revisi'}
+                type="date"
+                name="tanggal_revisi"
+                defaultValue={editing?.tanggal_revisi?.slice(0, 10) ?? ''}
+                required
+                aria-required="true"
+                className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
+              />
+            </div>
+          </div>
           <div>
             <label
-              htmlFor={editing ? 'edit-revisi-ke' : 'add-revisi-ke'}
+              htmlFor={editing ? 'edit-tahun-anggaran' : 'add-tahun-anggaran'}
               className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
             >
-              Revisi Ke <span className="text-rose-600" aria-label="wajib diisi">*</span>
+              Tahun Anggaran <span className="text-rose-600" aria-label="wajib diisi">*</span>
             </label>
-            <input
-              id={editing ? 'edit-revisi-ke' : 'add-revisi-ke'}
-              type="number"
-              name="revisi_ke"
-              defaultValue={editing?.revisi_ke ?? 0}
+            <select
+              id={editing ? 'edit-tahun-anggaran' : 'add-tahun-anggaran'}
+              name="tahun_anggaran"
+              defaultValue={editing?.tahun_anggaran ?? new Date().getFullYear()}
               required
-              aria-required="true"
-              min={0}
-              placeholder="0"
               className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
-            />
+            >
+              {[2024, 2025, 2026, 2027].map((y) => (
+                <option key={y} value={y}>TA {y}</option>
+              ))}
+            </select>
           </div>
           <FileUpload
             label="Dokumen DIPA"
