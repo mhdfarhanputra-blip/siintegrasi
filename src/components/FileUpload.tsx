@@ -43,6 +43,7 @@ export default function FileUpload({
 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [mode, setMode] = useState<'upload' | 'link'>(value ? 'link' : 'upload')
+  const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -160,8 +161,23 @@ export default function FileUpload({
       {mode === 'upload' ? (
         <div
           onClick={() => !uploading && fileRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragOver(false)
+            const file = e.dataTransfer.files[0]
+            if (file) {
+              const syntheticEvent = {
+                target: { files: [file] },
+              } as unknown as React.ChangeEvent<HTMLInputElement>
+              handleFileSelect(syntheticEvent)
+            }
+          }}
           className={`relative border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer ${
-            uploading
+            dragOver
+              ? 'drop-zone-active'
+              : uploading
               ? 'border-[var(--color-gold-500)] bg-[var(--color-gold-500)]/5'
               : 'border-[var(--color-surface-200)] hover:border-[var(--color-gold-500)] hover:bg-[var(--color-surface-50)]'
           }`}
@@ -182,7 +198,7 @@ export default function FileUpload({
             <div className="flex flex-col items-center gap-2">
               <Upload size={24} className="text-[var(--color-ink-400)]" />
               <p className="text-[12.5px] text-[var(--color-ink-700)] font-medium">
-                Klik untuk pilih file
+                Klik atau seret file ke sini
               </p>
               <p className="text-[11px] text-[var(--color-ink-400)]">
                 PDF, Gambar, Excel, Word, PPT, ZIP — Maks 50 MB

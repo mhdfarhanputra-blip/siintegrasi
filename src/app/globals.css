@@ -200,3 +200,105 @@ button:disabled,
 [role="button"][aria-disabled="true"] {
   cursor: not-allowed;
 }
+
+/* ----- Dark Mode ----- */
+
+.dark {
+  --color-surface-50: #0f1419;
+  --color-surface-100: #1a1f2e;
+  --color-surface-200: #252b3b;
+  --color-surface-300: #353d50;
+  --color-ink-900: #f0f2f5;
+  --color-ink-700: #d1d5db;
+  --color-ink-500: #9ca3af;
+  --color-ink-400: #6b7280;
+}
+
+.dark html,
+.dark body {
+  background: var(--color-surface-50);
+  color: var(--color-ink-900);
+}
+
+.dark .card-base {
+  background: var(--color-surface-100);
+  border-color: var(--color-surface-200);
+}
+
+/* ----- Tab transition ----- */
+
+.tab-content-enter {
+  animation: tab-fade-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes tab-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ----- Scroll shadow (table containers) ----- */
+
+.scroll-shadow {
+  position: relative;
+}
+
+.scroll-shadow::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(to top, var(--color-surface-50), transparent);
+  pointer-events: none;
+  display: block;
+}
+
+/* ----- Drag-and-drop zone ----- */
+
+.drop-zone-active {
+  border-color: var(--color-gold-500) !important;
+  background: rgba(199, 154, 74, 0.08) !important;
+}
+
+/* ----- Print styles ----- */
+
+@media print {
+  body { background: white !important; }
+  .no-print, aside, header, .fixed, [role="dialog"] { display: none !important; }
+  .card-base { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+  main { padding: 0 !important; }
+  table { font-size: 10px !important; }
+  @page { margin: 1.5cm; }
+}
+
+/* ----- Tooltip ----- */
+
+.tooltip-trigger { position: relative; }
+.tooltip-trigger .tooltip-content {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: var(--color-navy-900);
+  color: white;
+  font-size: 11px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast);
+  z-index: 50;
+}
+.tooltip-trigger:hover .tooltip-content {
+  opacity: 1;
+}
+
+/* ----- Density toggle ----- */
+
+.density-compact table td,
+.density-compact table th {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}

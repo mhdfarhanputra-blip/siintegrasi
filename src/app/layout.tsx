@@ -18,13 +18,13 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: 'SI Terintegrasi P2JN Babel',
-    template: '%s · SI Terintegrasi P2JN Babel',
+    default: 'SI Terintegrasi',
+    template: '%s · SI Terintegrasi',
   },
   description:
-    'Sistem Informasi Terintegrasi Satker P2JN Bangka Belitung — keuangan, BMN, utilitas, dan perencanaan anggaran.',
+    'Sistem Informasi Terintegrasi — manajemen keuangan, aset, utilitas, dan perencanaan anggaran.',
   manifest: '/manifest.json',
-  applicationName: 'SI Terintegrasi P2JN Babel',
+  applicationName: 'SI Terintegrasi',
   icons: { icon: '/favicon.ico' },
 }
 
