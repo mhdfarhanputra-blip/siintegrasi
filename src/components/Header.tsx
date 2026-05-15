@@ -15,7 +15,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/': { title: 'Dashboard', subtitle: 'Ringkasan kinerja dan status layanan' },
   '/keuangan': { title: 'Keuangan', subtitle: 'Transaksi kas, debit, dan kredit' },
   '/persediaan': { title: 'Persediaan', subtitle: 'Stok barang masuk dan keluar' },
-  '/bmn': { title: 'Barang Milik Negara', subtitle: 'Inventaris aset satker' },
+  '/bmn': { title: 'Barang Milik Negara', subtitle: 'Inventaris aset organisasi' },
   '/utilitas': { title: 'Utilitas', subtitle: 'Permohonan perizinan dan transmital' },
   '/dipa': { title: 'DIPA & RKA-KL', subtitle: 'Dokumen anggaran dan revisi' },
   '/perencanaan': { title: 'Perencanaan', subtitle: 'Analisa kronologi revisi anggaran' },
@@ -41,7 +41,7 @@ export default function Header({ userName, userRole }: HeaderProps) {
 
   const page = PAGE_TITLES[pathname] ?? {
     title: 'SI Terintegrasi',
-    subtitle: 'P2JN Bangka Belitung',
+    subtitle: 'Manajemen Operasional',
   }
 
   const initials = userName

@@ -1,5 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server'
 import PerencanaanClient from './PerencanaanClient'
+import realisasiData from '@/lib/realisasi-data.json'
 
 export default async function PerencanaanPage() {
   const supabase = await createServerSupabase()
@@ -16,6 +17,7 @@ export default async function PerencanaanPage() {
     <PerencanaanClient
       initialData={dipaRes.data ?? []}
       paguRealisasi={paguRes.data ?? []}
+      realisasiExcel={realisasiData}
     />
   )
 }
