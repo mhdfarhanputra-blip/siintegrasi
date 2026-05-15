@@ -1,13 +1,202 @@
 @import "tailwindcss";
 
+/* ============================================================
+   SI Terintegrasi P2JN Babel — Design Tokens
+   Style: Data-Dense Dashboard (skill: ui-ux-pro-max)
+   Brand: Kementerian PUPR (navy + gold)
+   ============================================================ */
+
 @theme inline {
+  /* Fonts */
   --font-sans: var(--font-inter);
-  --color-navy: #0c1e3e;
-  --color-gold: #c79a4a;
-  --color-surface: #fafbfc;
+  --font-display: var(--font-jakarta);
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+
+  /* Brand / Navy scale (official PUPR navy family) */
+  --color-navy-50: #f4f6fb;
+  --color-navy-100: #e5ebf5;
+  --color-navy-200: #c6d2e6;
+  --color-navy-700: #1a2d52;
+  --color-navy-800: #122243;
+  --color-navy-900: #0c1e3e;
+  --color-navy-950: #081530;
+
+  /* Brand / Gold accent (aksen resmi) */
+  --color-gold-300: #e0c58a;
+  --color-gold-400: #d1ae6a;
+  --color-gold-500: #c79a4a;
+  --color-gold-600: #a67f36;
+  --color-gold-700: #846428;
+
+  /* Semantic surface scale */
+  --color-surface-50: #fafbfc;
+  --color-surface-100: #f4f5f8;
+  --color-surface-200: #e8eaf0;
+  --color-surface-300: #d2d6e0;
+
+  /* Ink (neutral text) */
+  --color-ink-900: #1a1a2e;
+  --color-ink-700: #2d3047;
+  --color-ink-500: #6b7280;
+  --color-ink-400: #8a92a6;
+
+  /* Semantic status (WCAG AA compliant) */
+  --color-success-50: #ecfdf5;
+  --color-success-600: #0f766e;
+  --color-success-700: #0d5f58;
+  --color-warning-50: #fffbeb;
+  --color-warning-600: #b45309;
+  --color-warning-700: #92400e;
+  --color-danger-50: #fef2f2;
+  --color-danger-600: #b91c1c;
+  --color-danger-700: #991b1b;
+  --color-info-50: #eff6ff;
+  --color-info-600: #1e40af;
+  --color-info-700: #1e3a8a;
 }
 
+:root {
+  /* Spacing scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  /* Shadows (tuned for data-dense dashboards) */
+  --shadow-xs: 0 1px 1px rgba(12, 30, 62, 0.04);
+  --shadow-sm: 0 1px 2px rgba(12, 30, 62, 0.06);
+  --shadow-md: 0 4px 12px -4px rgba(12, 30, 62, 0.08);
+  --shadow-lg: 0 10px 30px -6px rgba(12, 30, 62, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(199, 154, 74, 0.28);
+
+  /* Motion */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 280ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html,
 body {
-  background: var(--color-surface);
-  color: #1a1a1a;
+  background: var(--color-surface-50);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, .font-display {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* ----- Utility classes (used across primitives) ----- */
+
+.label-xs {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-ink-500);
+}
+
+.card-base {
+  background: #ffffff;
+  border: 1px solid var(--color-surface-200);
+  border-radius: var(--radius-lg);
+}
+
+.card-accent {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-accent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-image: linear-gradient(to right, var(--color-gold-500) 50%, transparent 50%);
+  background-size: 8px 2px;
+  pointer-events: none;
+}
+
+/* ----- Skeleton loader ----- */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-100) 25%,
+    var(--color-surface-200) 50%,
+    var(--color-surface-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ----- Scrollbar ----- */
+
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--color-surface-300); border-radius: 3px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: var(--color-ink-400); }
+
+/* ----- Animations ----- */
+
+.fade-in { animation: fade-in var(--motion-base) var(--ease-out); }
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up { animation: slide-up var(--motion-slow) var(--ease-out); }
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ----- Global focus for keyboard navigation ----- */
+
+:focus-visible {
+  outline: 2px solid var(--color-gold-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+button,
+a,
+input[type="button"],
+input[type="submit"],
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
 }

@@ -3,6 +3,14 @@ import UtilitasClient from './UtilitasClient'
 
 export default async function UtilitasPage() {
   const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id ?? '')
+    .single()
+
   const { data: utilitas } = await supabase
     .from('utilitas')
     .select('*')
@@ -17,6 +25,8 @@ export default async function UtilitasPage() {
     <UtilitasClient
       initialData={utilitas || []}
       initialTransmital={transmital || []}
+      currentUserId={user?.id ?? ''}
+      userRole={profile?.role ?? 'Pengusul'}
     />
   )
 }

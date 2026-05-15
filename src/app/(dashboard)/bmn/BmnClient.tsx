@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, MapPin, User } from 'lucide-react'
+import { Plus, Trash2, Pencil, Download, MapPin, User } from 'lucide-react'
 import Modal from '@/components/Modal'
+import FileUpload from '@/components/FileUpload'
+import SearchInput from '@/components/SearchInput'
+import { useRealtime } from '@/lib/useRealtime'
+import { showError, showSuccess, confirmAction } from '@/lib/toast'
 
 interface BmnRow {
   id: string
@@ -29,15 +33,41 @@ const KONDISI_COLOR: Record<string, string> = {
   'Rusak Berat': 'bg-red-50 text-red-700',
 }
 
-const supabase = createClient()
-
 export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
   const [data, setData] = useState(initialData)
   const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<BmnRow | null>(null)
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  const [linkFoto, setLinkFoto] = useState<string | null>(null)
   const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
 
-  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+  useRealtime('bmn')
+
+  const filtered = data.filter((d) => {
+    const q = search.toLowerCase()
+    return (
+      d.nama_aset.toLowerCase().includes(q) ||
+      d.kode_aset.toLowerCase().includes(q) ||
+      (d.lokasi ?? '').toLowerCase().includes(q) ||
+      (d.pengguna ?? '').toLowerCase().includes(q)
+    )
+  })
+
+  const openAdd = () => {
+    setEditing(null)
+    setLinkFoto(null)
+    setShowForm(true)
+  }
+
+  const openEdit = (row: BmnRow) => {
+    setEditing(row)
+    setLinkFoto(row.link_foto)
+    setShowForm(true)
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     const form = new FormData(e.currentTarget)
@@ -50,70 +80,108 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
       lokasi: (form.get('lokasi') as string) || null,
       pengguna: (form.get('pengguna') as string) || null,
       status_penggunaan: form.get('status_penggunaan') as string,
-      link_foto: (form.get('link_foto') as string) || null,
+      link_foto: linkFoto,
     }
-    const { error } = await supabase.from('bmn').insert(payload)
-    setLoading(false)
-    if (!error) {
+
+    try {
+      if (editing) {
+        const { error } = await supabase.from('bmn').update(payload).eq('id', editing.id)
+        if (error) throw error
+        showSuccess('Aset BMN berhasil diperbarui')
+      } else {
+        const { error } = await supabase.from('bmn').insert(payload)
+        if (error) throw error
+        showSuccess('Aset BMN berhasil disimpan')
+      }
       setShowForm(false)
+      setEditing(null)
       router.refresh()
-    } else {
-      alert('Gagal menyimpan data: ' + error.message)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
+      showError('Gagal menyimpan', msg)
+    } finally {
+      setLoading(false)
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Hapus data aset BMN ini?')) return
-    const { error } = await supabase.from('bmn').delete().eq('id', id)
-    if (!error) {
+    if (!confirmAction('Hapus data aset BMN ini?')) return
+    try {
+      const { error } = await supabase.from('bmn').delete().eq('id', id)
+      if (error) throw error
       setData((prev) => prev.filter((d) => d.id !== id))
-    } else {
-      alert('Gagal menghapus: ' + error.message)
+      showSuccess('Aset BMN berhasil dihapus')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
+      showError('Gagal menghapus', msg)
     }
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-[#0c1e3e]">Barang Milik Negara</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-[#0c1e3e] text-white px-4 py-2 rounded-lg hover:bg-[#122243] transition flex items-center gap-2"
-        >
-          <Plus size={16} /> Tambah Aset
-        </button>
+      <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
+        <h2 className="text-2xl font-bold text-[var(--color-navy-900)]">Barang Milik Negara</h2>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={openAdd}
+            className="bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-navy-800)] transition flex items-center gap-2 text-sm"
+          >
+            <Plus size={16} /> Tambah Aset
+          </button>
+          <a
+            href="/api/export/bmn"
+            download
+            className="flex items-center gap-2 px-4 py-2 border border-[var(--color-surface-200)] text-sm rounded-lg hover:bg-[var(--color-surface-100)] transition text-[var(--color-ink-700)]"
+          >
+            <Download size={16} /> Ekspor CSV
+          </a>
+        </div>
       </div>
 
-      {/* Card Grid */}
-      {data.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">Belum ada data aset BMN</div>
+      <div className="mb-4 w-full sm:max-w-xs">
+        <SearchInput value={search} onChange={setSearch} placeholder="Cari aset..." />
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-12 text-[var(--color-ink-400)]">
+          {data.length === 0 ? 'Belum ada data aset BMN' : 'Tidak ada hasil pencarian'}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.map((row) => (
+          {filtered.map((row) => (
             <div
               key={row.id}
-              className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col"
+              className="bg-white rounded-xl p-5 shadow-sm border border-[var(--color-surface-200)] flex flex-col"
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <p className="text-xs text-gray-400 font-mono">{row.kode_aset}</p>
-                  <h3 className="font-semibold text-[#0c1e3e] mt-0.5">{row.nama_aset}</h3>
+                  <p className="text-xs text-[var(--color-ink-400)] font-mono">{row.kode_aset}</p>
+                  <h3 className="font-semibold text-[var(--color-navy-900)] mt-0.5">{row.nama_aset}</h3>
                 </div>
-                <button
-                  onClick={() => handleDelete(row.id)}
-                  className="text-red-400 hover:text-red-600 transition"
-                  title="Hapus"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openEdit(row)}
+                    className="text-[var(--color-ink-400)] hover:text-[var(--color-gold-500)] transition"
+                    title="Ubah"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(row.id)}
+                    className="text-red-400 hover:text-red-600 transition"
+                    title="Hapus"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
               {row.spesifikasi && (
-                <p className="text-xs text-gray-500 mb-3">{row.spesifikasi}</p>
+                <p className="text-xs text-[var(--color-ink-500)] mb-3">{row.spesifikasi}</p>
               )}
               <div className="flex flex-wrap gap-2 mb-3">
                 <span
                   className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    KONDISI_COLOR[row.kondisi] || 'bg-gray-50 text-gray-700'
+                    KONDISI_COLOR[row.kondisi] || 'bg-[var(--color-surface-50)] text-[var(--color-ink-700)]'
                   }`}
                 >
                   {row.kondisi}
@@ -122,10 +190,10 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
                   {row.status_penggunaan}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-[#c79a4a] mb-3">
+              <p className="text-sm font-semibold text-[var(--color-gold-500)] mb-3">
                 {formatCurrency(row.nilai_aset)}
               </p>
-              <div className="mt-auto flex items-center gap-4 text-xs text-gray-500">
+              <div className="mt-auto flex items-center gap-4 text-xs text-[var(--color-ink-500)]">
                 {row.lokasi && (
                   <span className="flex items-center gap-1">
                     <MapPin size={12} /> {row.lokasi}
@@ -142,47 +210,84 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
         </div>
       )}
 
-      {/* Add Modal */}
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Tambah Aset BMN">
-        <form onSubmit={handleAdd} className="space-y-4">
+      <Modal
+        isOpen={showForm}
+        onClose={() => {
+          setShowForm(false)
+          setEditing(null)
+        }}
+        title={editing ? 'Ubah Aset BMN' : 'Tambah Aset BMN'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kode Aset</label>
+              <label
+                htmlFor={editing ? 'edit-kode-aset' : 'add-kode-aset'}
+                className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+              >
+                Kode Aset <span className="text-rose-600" aria-label="wajib diisi">*</span>
+              </label>
               <input
+                id={editing ? 'edit-kode-aset' : 'add-kode-aset'}
                 type="text"
                 name="kode_aset"
+                defaultValue={editing?.kode_aset}
                 required
+                aria-required="true"
                 placeholder="3.06.01.01.001"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
+                className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Aset</label>
+              <label
+                htmlFor={editing ? 'edit-nama-aset' : 'add-nama-aset'}
+                className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+              >
+                Nama Aset <span className="text-rose-600" aria-label="wajib diisi">*</span>
+              </label>
               <input
+                id={editing ? 'edit-nama-aset' : 'add-nama-aset'}
                 type="text"
                 name="nama_aset"
+                defaultValue={editing?.nama_aset}
                 required
+                aria-required="true"
                 placeholder="Laptop Dell"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
+                className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Spesifikasi</label>
+            <label
+              htmlFor={editing ? 'edit-spesifikasi' : 'add-spesifikasi'}
+              className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+            >
+              Spesifikasi
+            </label>
             <input
+              id={editing ? 'edit-spesifikasi' : 'add-spesifikasi'}
               type="text"
               name="spesifikasi"
+              defaultValue={editing?.spesifikasi ?? ''}
               placeholder="Detail spesifikasi"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
+              className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kondisi</label>
+              <label
+                htmlFor={editing ? 'edit-kondisi' : 'add-kondisi'}
+                className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+              >
+                Kondisi <span className="text-rose-600" aria-label="wajib diisi">*</span>
+              </label>
               <select
+                id={editing ? 'edit-kondisi' : 'add-kondisi'}
                 name="kondisi"
+                defaultValue={editing?.kondisi ?? 'Baik'}
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
+                aria-required="true"
+                className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
               >
                 <option value="Baik">Baik</option>
                 <option value="Rusak Ringan">Rusak Ringan</option>
@@ -190,72 +295,103 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nilai Aset</label>
+              <label
+                htmlFor={editing ? 'edit-nilai-aset' : 'add-nilai-aset'}
+                className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+              >
+                Nilai Aset <span className="text-rose-600" aria-label="wajib diisi">*</span>
+              </label>
               <input
+                id={editing ? 'edit-nilai-aset' : 'add-nilai-aset'}
                 type="number"
                 name="nilai_aset"
+                defaultValue={editing?.nilai_aset}
                 required
+                aria-required="true"
                 min={0}
                 placeholder="0"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
+                className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lokasi</label>
+              <label
+                htmlFor={editing ? 'edit-lokasi' : 'add-lokasi'}
+                className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+              >
+                Lokasi
+              </label>
               <input
+                id={editing ? 'edit-lokasi' : 'add-lokasi'}
                 type="text"
                 name="lokasi"
+                defaultValue={editing?.lokasi ?? ''}
                 placeholder="Ruang kerja"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
+                className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pengguna</label>
+              <label
+                htmlFor={editing ? 'edit-pengguna' : 'add-pengguna'}
+                className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+              >
+                Pengguna
+              </label>
               <input
+                id={editing ? 'edit-pengguna' : 'add-pengguna'}
                 type="text"
                 name="pengguna"
+                defaultValue={editing?.pengguna ?? ''}
                 placeholder="Nama pengguna"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
+                className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status Penggunaan</label>
+            <label
+              htmlFor={editing ? 'edit-status-penggunaan' : 'add-status-penggunaan'}
+              className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+            >
+              Status Penggunaan <span className="text-rose-600" aria-label="wajib diisi">*</span>
+            </label>
             <select
+              id={editing ? 'edit-status-penggunaan' : 'add-status-penggunaan'}
               name="status_penggunaan"
+              defaultValue={editing?.status_penggunaan ?? 'Digunakan'}
               required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
+              aria-required="true"
+              className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
             >
               <option value="Digunakan">Digunakan</option>
               <option value="Tidak Digunakan">Tidak Digunakan</option>
               <option value="Dipinjamkan">Dipinjamkan</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Link Foto</label>
-            <input
-              type="url"
-              name="link_foto"
-              placeholder="https://..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#c79a4a] focus:border-transparent outline-none"
-            />
-          </div>
+          <FileUpload
+            label="Foto Aset"
+            value={linkFoto}
+            onChange={setLinkFoto}
+            helperText="Tempel tautan foto aset dari Google Drive kantor."
+            id={editing ? 'edit-link-foto' : 'add-link-foto'}
+          />
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setShowForm(false)}
-              className="border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-50 transition"
+              onClick={() => {
+                setShowForm(false)
+                setEditing(null)
+              }}
+              className="border border-[var(--color-surface-200)] px-4 py-2 rounded-lg hover:bg-[var(--color-surface-100)] transition"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="bg-[#0c1e3e] text-white px-4 py-2 rounded-lg hover:bg-[#122243] transition disabled:opacity-50"
+              className="bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-navy-800)] transition disabled:opacity-50"
             >
-              {loading ? 'Menyimpan...' : 'Simpan'}
+              {loading ? 'Menyimpan...' : editing ? 'Perbarui' : 'Simpan'}
             </button>
           </div>
         </form>

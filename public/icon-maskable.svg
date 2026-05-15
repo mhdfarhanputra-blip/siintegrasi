@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="P2JN">
+  <rect width="512" height="512" fill="#0c1e3e" />
+  <g transform="translate(96,96) scale(0.625)">
+    <rect width="512" height="512" rx="96" fill="#0c1e3e" />
+    <path d="M140 344 V176 h72 q50 0 50 46 0 46 -50 46 h-32" fill="none" stroke="#c79a4a" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="256" y="362" text-anchor="middle" font-family="Arial,sans-serif" font-size="100" font-weight="800" fill="#f7e2b2" letter-spacing="6">JN</text>
+  </g>
+</svg>
