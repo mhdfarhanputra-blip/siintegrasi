@@ -31,7 +31,7 @@ export default function Modal({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-[var(--color-navy-950)]/55 backdrop-blur-sm data-[state=open]:animate-[fade-in_180ms_ease-out]" />
         <Dialog.Content
-          className={`fixed left-1/2 top-1/2 z-50 w-full ${SIZE_CLASS[size]} -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden data-[state=open]:animate-[fade-in_180ms_ease-out] focus:outline-none`}
+          className={`fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] ${SIZE_CLASS[size]} -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl flex flex-col max-h-[85vh] overflow-hidden data-[state=open]:animate-[fade-in_180ms_ease-out] focus:outline-none`}
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-surface-200)] bg-gradient-to-r from-white to-[var(--color-surface-50)]">
             <div className="min-w-0">
