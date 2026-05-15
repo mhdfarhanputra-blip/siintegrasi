@@ -794,8 +794,9 @@ function FormModal({ isOpen, editing, loading, linkDed, setLinkDed, onClose, onS
           label="Dokumen DED"
           value={linkDed}
           onChange={setLinkDed}
-          helperText="Tempel tautan dokumen DED dari Google Drive kantor."
+          helperText="Unggah file DED atau tempel tautan dokumen."
           id={editing ? 'edit-link-ded' : 'add-link-ded'}
+          modul="utilitas"
         />
         <div className="flex justify-end gap-3 pt-2">
           <button

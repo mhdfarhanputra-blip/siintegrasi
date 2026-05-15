@@ -303,15 +303,17 @@ export default function DipaClient({
             label="Dokumen DIPA"
             value={linkDipa}
             onChange={setLinkDipa}
-            helperText="Tempel tautan dokumen DIPA dari Google Drive kantor."
+            helperText="Unggah dokumen DIPA atau tempel tautan."
             id={editing ? 'edit-link-dipa' : 'add-link-dipa'}
+            modul="DIPA"
           />
           <FileUpload
             label="Dokumen RKA-KL"
             value={linkRkakl}
             onChange={setLinkRkakl}
-            helperText="Tempel tautan dokumen RKA-KL dari Google Drive kantor."
+            helperText="Unggah dokumen RKA-KL atau tempel tautan."
             id={editing ? 'edit-link-rkakl' : 'add-link-rkakl'}
+            modul="DIPA"
           />
           <div>
             <label

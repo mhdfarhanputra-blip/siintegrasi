@@ -11,7 +11,7 @@ interface ChatMessage {
 
 const MAX_MESSAGES_VISIBLE = 30
 const SYSTEM_PROMPT =
-  'Kamu adalah asisten untuk aplikasi SI Terintegrasi P2JN Bangka Belitung. Bantu jelaskan alur kerja utilitas, modul keuangan, BMN, DIPA/RKA-KL, dan perencanaan. Jawab dalam Bahasa Indonesia yang singkat dan jelas.'
+  'Kamu adalah asisten untuk aplikasi SI Terintegrasi. Bantu jelaskan alur kerja utilitas, modul keuangan, BMN, DIPA/RKA-KL, dan perencanaan. Jawab dalam Bahasa Indonesia yang singkat dan jelas.'
 
 export default function AiAssistant() {
   const [open, setOpen] = useState(false)

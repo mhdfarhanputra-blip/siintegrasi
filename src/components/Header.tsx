@@ -21,6 +21,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/perencanaan': { title: 'Perencanaan', subtitle: 'Analisa kronologi revisi anggaran' },
   '/pengguna': { title: 'Manajemen Pengguna', subtitle: 'Daftar akun dan hak akses' },
   '/audit': { title: 'Audit Log', subtitle: 'Jejak aktivitas seluruh modul' },
+  '/profil': { title: 'Profil Saya', subtitle: 'Kelola informasi akun' },
 }
 
 export default function Header({ userName, userRole }: HeaderProps) {
@@ -115,7 +116,7 @@ export default function Header({ userName, userRole }: HeaderProps) {
               <div className="p-1.5">
                 <button
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-[var(--color-ink-700)] hover:bg-[var(--color-surface-100)] transition text-left"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => { setMenuOpen(false); router.push('/profil') }}
                 >
                   <UserCircle2 size={16} className="text-[var(--color-ink-500)]" />
                   <span>Profil saya</span>

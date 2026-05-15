@@ -1,6 +1,8 @@
 'use client'
 
-import { ExternalLink, FileCheck2, X, Link as LinkIcon } from 'lucide-react'
+import { useState, useRef, useCallback } from 'react'
+import { Upload, FileCheck2, X, Link as LinkIcon, Loader2 } from 'lucide-react'
+import { showError } from '@/lib/toast'
 
 interface FileUploadProps {
   label?: string
@@ -10,15 +12,11 @@ interface FileUploadProps {
   name?: string
   required?: boolean
   id?: string
+  modul?: string
 }
 
-const DRIVE_URL = 'https://drive.google.com/drive/folders/1NYHmpHAxbU5IN3uSAfzMgRPwwj6sqkQR'
+const MAX_DISPLAY_SIZE = 50 * 1024 * 1024
 
-/**
- * Pastikan URL aman untuk dibuka di tag <a href>. Hanya mengizinkan
- * skema http(s) untuk mencegah XSS lewat URL seperti javascript:... atau
- * data:... yang bisa tersimpan di database dan dieksekusi saat diklik.
- */
 function isSafeUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
@@ -29,11 +27,9 @@ function isSafeUrl(url: string): boolean {
 }
 
 /**
- * Input tautan dokumen.
- *
- * Alur: pengguna mengunggah berkas secara manual ke folder Google Drive
- * kantor, salin tautan Share-nya, lalu tempel di input di bawah.
- * Tombol bantu "Buka Google Drive" membuka folder kantor di tab baru.
+ * Komponen upload file hybrid:
+ * - Mode 1: Upload langsung ke server (Supabase Storage) — file terorganisir otomatis
+ * - Mode 2: Paste link manual (URL dokumen)
  */
 export default function FileUpload({
   label,
@@ -43,17 +39,159 @@ export default function FileUpload({
   name,
   required,
   id,
+  modul = 'umum',
 }: FileUploadProps) {
+  const [uploading, setUploading] = useState(false)
+  const [mode, setMode] = useState<'upload' | 'link'>(value ? 'link' : 'upload')
+  const fileRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > MAX_DISPLAY_SIZE) {
+      showError('File terlalu besar', 'Maksimal 50 MB.')
+      return
+    }
+
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('modul', modul)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      })
+      const json = await res.json()
+
+      if (!res.ok) {
+        throw new Error(json.error || 'Gagal mengunggah file')
+      }
+
+      if (typeof json.url !== 'string' || !json.url) {
+        throw new Error('Server tidak mengembalikan URL file')
+      }
+
+      onChange(json.url)
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
+      showError('Gagal mengunggah', msg)
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }, [modul, onChange])
+
+  if (value && isSafeUrl(value)) {
+    return (
+      <div className="space-y-1.5">
+        {label && (
+          <label className="block text-sm font-medium text-[var(--color-ink-700)]">
+            {label} {required && <span className="text-rose-600">*</span>}
+          </label>
+        )}
+        <div className="flex items-center gap-2 p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
+          <FileCheck2 size={16} className="text-emerald-600 flex-shrink-0" />
+          <a
+            href={value}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 text-[12.5px] text-emerald-800 font-medium truncate hover:underline"
+          >
+            {value.length > 60 ? value.slice(0, 60) + '...' : value}
+          </a>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition"
+            title="Hapus file"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {label && (
         <label htmlFor={id} className="block text-sm font-medium text-[var(--color-ink-700)]">
           {label} {required && <span className="text-rose-600">*</span>}
         </label>
       )}
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      <div className="flex gap-1 mb-2">
+        <button
+          type="button"
+          onClick={() => setMode('upload')}
+          className={`px-3 py-1.5 rounded-lg text-[11.5px] font-medium transition cursor-pointer ${
+            mode === 'upload'
+              ? 'bg-[var(--color-navy-900)] text-white'
+              : 'bg-[var(--color-surface-100)] text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]'
+          }`}
+        >
+          <Upload size={12} className="inline mr-1" />
+          Upload File
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('link')}
+          className={`px-3 py-1.5 rounded-lg text-[11.5px] font-medium transition cursor-pointer ${
+            mode === 'link'
+              ? 'bg-[var(--color-navy-900)] text-white'
+              : 'bg-[var(--color-surface-100)] text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]'
+          }`}
+        >
+          <LinkIcon size={12} className="inline mr-1" />
+          Tempel Tautan
+        </button>
+      </div>
+
+      {mode === 'upload' ? (
+        <div
+          onClick={() => !uploading && fileRef.current?.click()}
+          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer ${
+            uploading
+              ? 'border-[var(--color-gold-500)] bg-[var(--color-gold-500)]/5'
+              : 'border-[var(--color-surface-200)] hover:border-[var(--color-gold-500)] hover:bg-[var(--color-surface-50)]'
+          }`}
+        >
+          <input
+            ref={fileRef}
+            type="file"
+            onChange={handleFileSelect}
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.docx,.doc,.pptx,.zip,.rar"
+            className="hidden"
+          />
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 size={24} className="text-[var(--color-gold-500)] animate-spin" />
+              <p className="text-[12.5px] text-[var(--color-ink-500)]">Mengunggah...</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <Upload size={24} className="text-[var(--color-ink-400)]" />
+              <p className="text-[12.5px] text-[var(--color-ink-700)] font-medium">
+                Klik untuk pilih file
+              </p>
+              <p className="text-[11px] text-[var(--color-ink-400)]">
+                PDF, Gambar, Excel, Word, PPT, ZIP — Maks 50 MB
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="relative">
           <LinkIcon
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-400)] pointer-events-none"
@@ -64,43 +202,20 @@ export default function FileUpload({
             type="url"
             value={value ?? ''}
             onChange={(e) => onChange(e.target.value || null)}
-            placeholder="https://drive.google.com/..."
-            className="w-full pl-9 pr-3 py-2 rounded-lg border border-[var(--color-surface-200)] text-sm focus:outline-none focus:border-[var(--color-gold-500)] focus:shadow-[0_0_0_3px_rgba(199,154,74,0.12)]"
+            placeholder="https://contoh.com/dokumen/file.pdf"
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--color-surface-200)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50 focus:border-[var(--color-gold-500)]"
           />
         </div>
-        {value && isSafeUrl(value) && (
-          <>
-            <a
-              href={value}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-2 rounded-lg text-[12px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5 hover:bg-emerald-100 transition"
-            >
-              <FileCheck2 size={14} /> Buka
-            </a>
-            <button
-              type="button"
-              onClick={() => onChange(null)}
-              className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 transition"
-              title="Hapus tautan"
-            >
-              <X size={14} />
-            </button>
-          </>
-        )}
-      </div>
+      )}
 
-      <div className="flex items-center justify-between gap-3 text-[11px] text-[var(--color-ink-500)]">
-        <span>{helperText || 'Unggah berkas ke Google Drive kantor, lalu tempel tautan Share-nya di sini.'}</span>
-        <a
-          href={DRIVE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[var(--color-navy-900)] hover:text-[var(--color-gold-600)] transition whitespace-nowrap"
-        >
-          <ExternalLink size={11} /> Buka Google Drive
-        </a>
-      </div>
+      {helperText && (
+        <p className="text-[11px] text-[var(--color-ink-400)]">{helperText}</p>
+      )}
+      {mode === 'upload' && (
+        <p className="text-[11px] text-[var(--color-ink-400)]">
+          File akan diunggah ke Google Drive folder <span className="font-medium">{modul}/</span> secara otomatis dan terstruktur.
+        </p>
+      )}
     </div>
   )
 }

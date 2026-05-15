@@ -372,8 +372,9 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
             label="Foto Aset"
             value={linkFoto}
             onChange={setLinkFoto}
-            helperText="Tempel tautan foto aset dari Google Drive kantor."
+            helperText="Unggah foto aset atau tempel tautan."
             id={editing ? 'edit-link-foto' : 'add-link-foto'}
+            modul="BMN"
           />
           <div className="flex justify-end gap-3 pt-2">
             <button

@@ -23,7 +23,7 @@ function adminClient() {
 
 /**
  * Buat baris profil baru lewat service-role (bypass RLS) agar user
- * yang baru OAuth langsung punya entri Pending, konsisten di middleware,
+ * yang baru verifikasi email langsung punya entri Pending, konsisten di middleware,
  * halaman pending, dan dashboard.
  */
 async function ensureProfile(id: string, email: string, nama: string) {

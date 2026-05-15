@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 const DEFAULT_SYSTEM_PROMPT =
-  'Kamu adalah asisten Bahasa Indonesia untuk aplikasi SI Terintegrasi P2JN Bangka Belitung. Jawab singkat, jelas, dan sopan.'
+  'Kamu adalah asisten Bahasa Indonesia untuk aplikasi SI Terintegrasi. Jawab singkat, jelas, dan sopan.'
 const DEFAULT_TEMPERATURE = 0.6
 const DEFAULT_MAX_TOKENS = 2048
 

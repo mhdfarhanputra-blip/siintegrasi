@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Wallet, Plus, Trash2, Download, Pencil } from 'lucide-react'
 import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
+import Pagination from '@/components/Pagination'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmAction } from '@/lib/toast'
 
@@ -49,25 +50,35 @@ function formatDate(iso: string): string {
   })
 }
 
+const ITEMS_PER_PAGE = 15
+
 export default function KeuanganClient({ initialData, kategoriList }: KeuanganClientProps) {
   const [data, setData] = useState<Keuangan[]>(initialData)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Keuangan | null>(null)
   const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
   useRealtime('keuangan')
 
-  const filtered = data.filter((d) => {
+  const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return (
+    return data.filter((d) =>
       (d.kategori ?? '').toLowerCase().includes(q) ||
       (d.keterangan ?? '').toLowerCase().includes(q) ||
       d.jenis_transaksi.toLowerCase().includes(q)
     )
-  })
+  }, [data, search])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedData = filtered.slice(
+    (safePage - 1) * ITEMS_PER_PAGE,
+    safePage * ITEMS_PER_PAGE
+  )
 
   const totalDebit = data
     .filter((d) => d.jenis_transaksi === 'Debit')
@@ -153,7 +164,14 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
           </a>
         </div>
         <div className="w-full sm:w-64">
-          <SearchInput value={search} onChange={setSearch} placeholder="Cari transaksi..." />
+          <SearchInput
+            value={search}
+            onChange={(v) => {
+              setSearch(v)
+              setCurrentPage(1)
+            }}
+            placeholder="Cari transaksi..."
+          />
         </div>
       </div>
 
@@ -162,7 +180,8 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
       ) : (
         <>
           <SummaryCards totalDebit={totalDebit} totalKredit={totalKredit} saldo={saldo} />
-          <TransaksiTable data={filtered} onDelete={handleDelete} onEdit={openEdit} />
+          <TransaksiTable data={paginatedData} onDelete={handleDelete} onEdit={openEdit} />
+          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </>
       )}
 
