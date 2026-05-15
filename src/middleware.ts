@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/auth/callback']
+const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/callback']
 const PUBLIC_PREFIXES = ['/track/']
 const ADMIN_ONLY_ROUTES = ['/pengguna', '/audit']
 const NON_PENGUSUL_ROUTES = ['/dipa', '/perencanaan', '/keuangan', '/persediaan', '/bmn']

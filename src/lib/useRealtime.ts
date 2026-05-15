@@ -1,31 +1,32 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 /**
  * Subscribe ke perubahan realtime pada sebuah tabel Supabase.
- * Nama channel di-uniqkan per mount untuk menghindari error
- * "cannot add postgres_changes callbacks ... after subscribe()"
- * yang terjadi saat channel dengan nama sama di-reuse (termasuk di
- * React StrictMode yang memount effect dua kali).
+ * Memanggil router.refresh() untuk re-fetch server data DAN
+ * optional onUpdate callback untuk update local state langsung.
  */
-export function useRealtime(table: string) {
+export function useRealtime(table: string, onUpdate?: () => void) {
   const router = useRouter()
+
+  const handleChange = useCallback(() => {
+    router.refresh()
+    onUpdate?.()
+  }, [router, onUpdate])
 
   useEffect(() => {
     const supabase = createClient()
     const channelName = `realtime-${table}-${Math.random().toString(36).slice(2)}`
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-        router.refresh()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table }, handleChange)
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [table, router])
+  }, [table, handleChange])
 }

@@ -191,13 +191,13 @@ export default async function DashboardPage() {
         <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-gold-300)] font-semibold">
-              Satker P2JN Bangka Belitung
+              Platform Manajemen Operasional
             </p>
             <h2 className="text-2xl md:text-3xl font-bold font-display mt-2">
               Selamat datang kembali di SI Terintegrasi
             </h2>
             <p className="text-white/70 text-sm mt-2 max-w-xl">
-              Pantau seluruh operasional kantor dalam satu dashboard: keuangan, aset, utilitas, dan perencanaan anggaran.
+              Pantau seluruh operasional dalam satu dashboard: keuangan, aset, utilitas, dan perencanaan anggaran.
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-white/80 bg-white/10 backdrop-blur px-3 py-2 rounded-xl border border-white/10 self-start md:self-auto">
