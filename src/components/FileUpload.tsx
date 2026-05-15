@@ -16,6 +16,8 @@ interface FileUploadProps {
 }
 
 const MAX_DISPLAY_SIZE = 50 * 1024 * 1024
+const MAX_IMAGE_BYTES = 1 * 1024 * 1024 // Target max 1 MB untuk gambar
+const MAX_IMAGE_DIM = 1920 // Max dimensi pixel
 
 function isSafeUrl(url: string): boolean {
   try {
@@ -24,6 +26,63 @@ function isSafeUrl(url: string): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Kompres gambar di browser menggunakan Canvas API.
+ * - Resize max 1920px (sisi terpanjang)
+ * - Turunkan quality JPEG sampai <= 1 MB
+ * - Kualitas tetap jelas untuk dokumen/foto
+ */
+function compressImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/') || file.size <= MAX_IMAGE_BYTES) {
+      resolve(file)
+      return
+    }
+
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+
+      if (width > MAX_IMAGE_DIM || height > MAX_IMAGE_DIM) {
+        const ratio = Math.min(MAX_IMAGE_DIM / width, MAX_IMAGE_DIM / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(file); return }
+      ctx.drawImage(img, 0, 0, width, height)
+
+      let quality = 0.82
+      const attempt = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return }
+            if (blob.size <= MAX_IMAGE_BYTES || quality <= 0.4) {
+              resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }))
+            } else {
+              quality -= 0.08
+              attempt()
+            }
+          },
+          'image/jpeg',
+          quality,
+        )
+      }
+      attempt()
+    }
+
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
 }
 
 /**
@@ -62,8 +121,9 @@ export default function FileUpload({
 
     setUploading(true)
     try {
+      const processed = await compressImage(file)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', processed)
       formData.append('modul', modul)
 
       const res = await fetch('/api/upload', {
