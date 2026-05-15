@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/getCurrentUser'
-import { google } from 'googleapis'
-import { Readable } from 'stream'
+
+export const runtime = 'nodejs'
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB
-const ROOT_FOLDER_NAME = 'SI_Terintegrasi'
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -22,61 +21,60 @@ const ALLOWED_TYPES = [
   'application/octet-stream',
 ]
 
-function getDriveClient() {
-  const base64 = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64
-  if (!base64) throw new Error('GOOGLE_SERVICE_ACCOUNT_BASE64 belum dikonfigurasi')
-
-  const json = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'))
-  const auth = new google.auth.GoogleAuth({
-    credentials: json,
-    scopes: ['https://www.googleapis.com/auth/drive'],
-  })
-  return google.drive({ version: 'v3', auth })
-}
-
-async function findOrCreateFolder(
-  drive: ReturnType<typeof google.drive>,
-  name: string,
-  parentId?: string,
-): Promise<string> {
-  const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
-  const query = parentId
-    ? `name='${safeName}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`
-    : `name='${safeName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`
-
-  const res = await drive.files.list({ q: query, fields: 'files(id, name)', spaces: 'drive' })
-  const existing = res.data.files?.[0]
-  if (existing?.id) return existing.id
-
-  const created = await drive.files.create({
-    requestBody: {
-      name,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: parentId ? [parentId] : undefined,
-    },
-    fields: 'id',
-  })
-  return created.data.id!
+/**
+ * Bangun folder path: SI_Terintegrasi/{modul}/{tahun}/{bulan}
+ */
+function buildFolder(modul: string): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  return `SI_Terintegrasi/${modul}/${year}/${month}`
 }
 
 /**
- * Buat struktur folder: SI_Terintegrasi/{modul}/{tahun}/{bulan}
- * Return folder ID terdalam
+ * Upload file ke Cloudinary via signed upload
  */
-async function ensureFolderStructure(
-  drive: ReturnType<typeof google.drive>,
-  modul: string,
-): Promise<string> {
-  const now = new Date()
-  const year = String(now.getFullYear())
-  const month = String(now.getMonth() + 1).padStart(2, '0')
+async function uploadToCloudinary(
+  file: File,
+  folder: string,
+): Promise<{ url: string; publicId: string }> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME
+  const apiKey = process.env.CLOUDINARY_API_KEY
+  const apiSecret = process.env.CLOUDINARY_API_SECRET
 
-  const rootId = await findOrCreateFolder(drive, ROOT_FOLDER_NAME)
-  const modulId = await findOrCreateFolder(drive, modul, rootId)
-  const yearId = await findOrCreateFolder(drive, year, modulId)
-  const monthId = await findOrCreateFolder(drive, month, yearId)
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error('Cloudinary belum dikonfigurasi')
+  }
 
-  return monthId
+  const timestamp = Math.round(Date.now() / 1000)
+  const paramsToSign = `folder=${folder}&timestamp=${timestamp}`
+
+  const { createHash } = await import('crypto')
+  const signature = createHash('sha1')
+    .update(paramsToSign + apiSecret)
+    .digest('hex')
+
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('folder', folder)
+  formData.append('timestamp', String(timestamp))
+  formData.append('api_key', apiKey)
+  formData.append('signature', signature)
+
+  const resourceType = file.type.startsWith('image/') ? 'image' : 'raw'
+  const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`
+
+  const res = await fetch(uploadUrl, { method: 'POST', body: formData })
+  if (!res.ok) {
+    const detail = await res.text()
+    throw new Error(`Upload gagal: ${detail.slice(0, 200)}`)
+  }
+
+  const data = await res.json()
+  return {
+    url: data.secure_url,
+    publicId: data.public_id,
+  }
 }
 
 export async function POST(request: Request) {
@@ -107,43 +105,19 @@ export async function POST(request: Request) {
       )
     }
 
-    const drive = getDriveClient()
-    const folderId = await ensureFolderStructure(drive, modul)
+    const folder = buildFolder(modul)
+    const { url, publicId } = await uploadToCloudinary(file, folder)
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    const stream = Readable.from(buffer)
-
-    const uploaded = await drive.files.create({
-      requestBody: {
-        name: file.name,
-        parents: [folderId],
-      },
-      media: {
-        mimeType: file.type,
-        body: stream,
-      },
-      fields: 'id, name, webViewLink, webContentLink',
-    })
-
-    // Set file permission: anyone with link can view
-    await drive.permissions.create({
-      fileId: uploaded.data.id!,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    })
-
-    const fileUrl = uploaded.data.webViewLink ?? `https://drive.google.com/file/d/${uploaded.data.id}/view`
+    // Sanitize filename to prevent path traversal in stored path
+    const safeName = file.name.replace(/[/\\]/g, '_')
 
     return NextResponse.json({
-      url: fileUrl,
-      fileId: uploaded.data.id,
-      name: uploaded.data.name,
+      url,
+      publicId,
+      name: safeName,
       size: file.size,
       modul,
-      path: `${ROOT_FOLDER_NAME}/${modul}/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${file.name}`,
+      path: `${folder}/${safeName}`,
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Kesalahan server'

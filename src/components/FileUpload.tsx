@@ -229,7 +229,7 @@ export default function FileUpload({
       )}
       {mode === 'upload' && (
         <p className="text-[11px] text-[var(--color-ink-400)]">
-          File akan diunggah ke Google Drive folder <span className="font-medium">{modul}/</span> secara otomatis dan terstruktur.
+          File akan diunggah ke cloud storage folder <span className="font-medium">{modul}/</span> secara otomatis dan terstruktur.
         </p>
       )}
     </div>
