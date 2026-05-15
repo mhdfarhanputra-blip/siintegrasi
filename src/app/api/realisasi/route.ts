@@ -3,7 +3,8 @@ import { getCurrentUser } from '@/lib/getCurrentUser'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import fallbackData from '@/lib/realisasi-data.json'
 
-const TABLE_NAME = 'realisasi_snapshot'
+const BUCKET_NAME = 'dokumen'
+const STORAGE_PATH = 'realisasi/data.json'
 
 function adminClient() {
   return createAdminClient(
@@ -19,21 +20,22 @@ export async function GET() {
     if (!me) return NextResponse.json({ error: 'Belum masuk' }, { status: 401 })
     if (me.role === 'Pengusul') return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 })
 
-    // Coba baca dari Supabase dulu
+    // Coba baca dari Supabase Storage
     const admin = adminClient()
-    const { data, error } = await admin
-      .from(TABLE_NAME)
-      .select('uraian, kode_akun, level, pagu, realisasi_lalu, realisasi_ini, realisasi_sd, persen, sisa, sort_order')
-      .order('sort_order', { ascending: true })
+    const { data: fileData, error } = await admin.storage
+      .from(BUCKET_NAME)
+      .download(STORAGE_PATH)
 
-    // Jika tabel belum ada atau kosong, gunakan data statis sebagai fallback
-    if (error || !data || data.length === 0) {
-      return NextResponse.json({ data: fallbackData, source: 'static' })
+    if (!error && fileData) {
+      const text = await fileData.text()
+      const parsed = JSON.parse(text)
+      return NextResponse.json({ data: parsed, source: 'storage' })
     }
 
-    return NextResponse.json({ data, source: 'database' })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Kesalahan server'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    // Fallback ke data statis bundled
+    return NextResponse.json({ data: fallbackData, source: 'static' })
+  } catch {
+    // Jika parsing gagal, fallback ke statis
+    return NextResponse.json({ data: fallbackData, source: 'static' })
   }
 }

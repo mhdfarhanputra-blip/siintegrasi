@@ -6,7 +6,8 @@ import * as XLSX from 'xlsx'
 export const runtime = 'nodejs'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
-const TABLE_NAME = 'realisasi_snapshot'
+const BUCKET_NAME = 'dokumen'
+const STORAGE_PATH = 'realisasi/data.json'
 
 interface RealisasiRow {
   uraian: string
@@ -73,6 +74,14 @@ function parseExcelToRealisasi(buffer: ArrayBuffer): RealisasiRow[] {
   return results
 }
 
+async function ensureBucket(admin: ReturnType<typeof adminClient>): Promise<void> {
+  const { data } = await admin.storage.getBucket(BUCKET_NAME)
+  if (!data) {
+    const { error } = await admin.storage.createBucket(BUCKET_NAME, { public: false })
+    if (error && !error.message.includes('already exists')) throw error
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const me = await getCurrentUser()
@@ -95,17 +104,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tidak ditemukan data realisasi. Pastikan format sesuai Laporan FA Detail (16 Segmen).' }, { status: 400 })
     }
 
-    // Simpan ke Supabase: hapus data lama, insert baru (chunked)
+    // Simpan ke Supabase Storage sebagai JSON
     const admin = adminClient()
-    const { error: deleteError } = await admin.from(TABLE_NAME).delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    if (deleteError) throw deleteError
+    await ensureBucket(admin)
 
-    const rows = data.map((r, idx) => ({ ...r, sort_order: idx }))
-    const BATCH_SIZE = 500
-    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-      const { error: insertError } = await admin.from(TABLE_NAME).insert(rows.slice(i, i + BATCH_SIZE))
-      if (insertError) throw insertError
-    }
+    const jsonContent = JSON.stringify(data)
+    const blob = new Blob([jsonContent], { type: 'application/json' })
+
+    const { error: uploadError } = await admin.storage
+      .from(BUCKET_NAME)
+      .upload(STORAGE_PATH, blob, { contentType: 'application/json', upsert: true })
+
+    if (uploadError) throw uploadError
 
     return NextResponse.json({
       success: true,
