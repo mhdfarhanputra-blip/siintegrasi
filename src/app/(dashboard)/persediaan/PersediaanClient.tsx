@@ -19,6 +19,7 @@ interface PersediaanRow {
   satuan: string
   stok_saldo: number
   stok_minimum: number | null
+  tahun_anggaran: number | null
   input_by: string | null
   created_at: string
 }
@@ -31,6 +32,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<PersediaanRow | null>(null)
   const [search, setSearch] = useState('')
+  const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -40,6 +42,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
   useRealtime('persediaan')
 
   const filtered = data.filter((d) => {
+    if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
     const q = search.toLowerCase()
     return (
       d.nama_barang.toLowerCase().includes(q) ||
@@ -159,8 +162,19 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
         </div>
       </div>
 
-      <div className="mb-4 w-full sm:max-w-xs">
-        <SearchInput value={search} onChange={setSearch} placeholder="Cari barang..." />
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <select
+          value={tahunFilter}
+          onChange={(e) => setTahunFilter(Number(e.target.value))}
+          className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+        >
+          {[2024, 2025, 2026, 2027].map((y) => (
+            <option key={y} value={y}>TA {y}</option>
+          ))}
+        </select>
+        <div className="w-full sm:max-w-xs">
+          <SearchInput value={search} onChange={setSearch} placeholder="Cari barang..." />
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-[var(--color-surface-200)] overflow-hidden">

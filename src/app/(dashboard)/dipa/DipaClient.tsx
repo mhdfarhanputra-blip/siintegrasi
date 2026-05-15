@@ -46,6 +46,7 @@ export default function DipaClient({
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<DipaRow | null>(null)
   const [loading, setLoading] = useState(false)
+  const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [linkDipa, setLinkDipa] = useState<string | null>(null)
   const [linkRkakl, setLinkRkakl] = useState<string | null>(null)
   const router = useRouter()
@@ -55,6 +56,8 @@ export default function DipaClient({
   useEffect(() => { setData(initialData) }, [initialData])
 
   useRealtime('dokumen_dipa')
+
+  const filteredData = data.filter((d) => !d.tahun_anggaran || d.tahun_anggaran === tahunFilter)
 
   const openAdd = () => {
     setEditing(null)
@@ -119,23 +122,34 @@ export default function DipaClient({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
         <h2 className="text-2xl font-bold text-[var(--color-navy-900)] font-display">Dokumen DIPA & RKA-KL</h2>
-        {isAdmin && (
-          <button
-            onClick={openAdd}
-            className="bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-xl hover:bg-[var(--color-navy-800)] transition flex items-center gap-2 text-sm"
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={tahunFilter}
+            onChange={(e) => setTahunFilter(Number(e.target.value))}
+            className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
           >
-            <Plus size={16} /> Upload Revisi
-          </button>
-        )}
+            {[2024, 2025, 2026, 2027].map((y) => (
+              <option key={y} value={y}>TA {y}</option>
+            ))}
+          </select>
+          {isAdmin && (
+            <button
+              onClick={openAdd}
+              className="bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-xl hover:bg-[var(--color-navy-800)] transition flex items-center gap-2 text-sm"
+            >
+              <Plus size={16} /> Upload Revisi
+            </button>
+          )}
+        </div>
       </div>
 
-      {data.length === 0 ? (
-        <div className="text-center py-12 text-[var(--color-ink-400)]">Belum ada dokumen DIPA</div>
+      {filteredData.length === 0 ? (
+        <div className="text-center py-12 text-[var(--color-ink-400)]">Belum ada dokumen DIPA untuk TA {tahunFilter}</div>
       ) : (
         <div className="space-y-4">
-          {data.map((row, idx) => (
+          {filteredData.map((row, idx) => (
             <div
               key={row.id}
               className="bg-white rounded-xl p-5 shadow-sm border border-[var(--color-surface-200)] relative"

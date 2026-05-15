@@ -33,6 +33,7 @@ interface UtilitasRow {
   status: string
   revisi_ke: number
   tracking_token: string | null
+  tahun_anggaran: number | null
   review_satker: 'PENDING' | 'OK' | 'CATATAN'
   review_satker_catatan: string | null
   review_satker_at: string | null
@@ -100,6 +101,7 @@ export default function UtilitasClient({
   const [linkDed, setLinkDed] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(initialData[0]?.id ?? null)
   const [search, setSearch] = useState('')
+  const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [loading, setLoading] = useState(false)
   const [noteTarget, setNoteTarget] = useState<{ row: UtilitasRow; op: Operator } | null>(null)
   const router = useRouter()
@@ -114,6 +116,7 @@ export default function UtilitasClient({
   const canCreate = userRole === 'Pengusul' || userRole === 'Admin'
 
   const filtered = data.filter((d) => {
+    if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
     const q = search.toLowerCase()
     return (
       d.jenis_pekerjaan.toLowerCase().includes(q) ||
@@ -332,6 +335,15 @@ export default function UtilitasClient({
       <WorkflowLegend isPengusul={isPengusul} />
 
       <div className="flex flex-wrap items-center gap-3">
+        <select
+          value={tahunFilter}
+          onChange={(e) => setTahunFilter(Number(e.target.value))}
+          className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+        >
+          {[2024, 2025, 2026, 2027].map((y) => (
+            <option key={y} value={y}>TA {y}</option>
+          ))}
+        </select>
         <div className="w-full sm:max-w-xs">
           <SearchInput value={search} onChange={setSearch} placeholder="Cari permohonan..." />
         </div>
