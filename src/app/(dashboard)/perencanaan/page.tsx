@@ -1,23 +1,22 @@
 import { createServerSupabase } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/getCurrentUser'
 import PerencanaanClient from './PerencanaanClient'
 import realisasiData from '@/lib/realisasi-data.json'
 
 export default async function PerencanaanPage() {
   const supabase = await createServerSupabase()
+  const me = await getCurrentUser()
 
-  const [dipaRes, paguRes] = await Promise.all([
-    supabase
-      .from('dokumen_dipa')
-      .select('id, revisi_ke, link_dipa, link_rkakl, keterangan_revisi, created_at')
-      .order('revisi_ke', { ascending: true }),
-    supabase.rpc('get_pagu_vs_realisasi'),
-  ])
+  const { data: dipa } = await supabase
+    .from('dokumen_dipa')
+    .select('id, revisi_ke, link_dipa, link_rkakl, keterangan_revisi, created_at')
+    .order('revisi_ke', { ascending: true })
 
   return (
     <PerencanaanClient
-      initialData={dipaRes.data ?? []}
-      paguRealisasi={paguRes.data ?? []}
+      initialData={dipa ?? []}
       realisasiExcel={realisasiData}
+      userRole={me?.role}
     />
   )
 }
