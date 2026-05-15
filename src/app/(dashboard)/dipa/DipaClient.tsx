@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Plus, FileText, Download, Trash2, Pencil, Sparkles } from 'lucide-react'
+import { Plus, FileText, Download, Trash2, Pencil } from 'lucide-react'
 import Modal from '@/components/Modal'
 import FileUpload from '@/components/FileUpload'
 import { useRealtime } from '@/lib/useRealtime'
@@ -50,65 +50,9 @@ export default function DipaClient({
   const supabase = useMemo(() => createClient(), [])
   const isAdmin = userRole === 'Admin'
 
+  useEffect(() => { setData(initialData) }, [initialData])
+
   useRealtime('dokumen_dipa')
-
-  // AI Parse state
-  const [showParse, setShowParse] = useState(false)
-  const [parseText, setParseText] = useState('')
-  const [parseRevisi, setParseRevisi] = useState(0)
-  const [parseLoading, setParseLoading] = useState(false)
-  const [parseResults, setParseResults] = useState<Array<{ kode_mak: string; uraian: string | null; pagu: number }>>([])
-
-  async function handleAiParse() {
-    if (parseText.trim().length < 20) {
-      showError('Teks terlalu pendek', 'Minimal 20 karakter untuk diproses AI.')
-      return
-    }
-    setParseLoading(true)
-    try {
-      const res = await fetch('/api/dipa/parse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: parseText }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Gagal memproses')
-      setParseResults(json.items ?? [])
-      if ((json.items ?? []).length === 0) {
-        showError('Tidak ditemukan', 'AI tidak menemukan mata anggaran dari teks yang diberikan.')
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
-      showError('Gagal parse DIPA', msg)
-    } finally {
-      setParseLoading(false)
-    }
-  }
-
-  async function handleSaveParseResults() {
-    if (parseResults.length === 0) return
-    setParseLoading(true)
-    try {
-      const items = parseResults.map((r) => ({
-        revisi_ke: parseRevisi,
-        kode_mak: r.kode_mak,
-        uraian: r.uraian,
-        pagu: r.pagu,
-      }))
-      const { error } = await supabase.from('dipa_items').insert(items)
-      if (error) throw error
-      showSuccess(`${items.length} mata anggaran berhasil disimpan`)
-      setShowParse(false)
-      setParseText('')
-      setParseResults([])
-      router.refresh()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
-      showError('Gagal menyimpan', msg)
-    } finally {
-      setParseLoading(false)
-    }
-  }
 
   const openAdd = () => {
     setEditing(null)
@@ -174,20 +118,12 @@ export default function DipaClient({
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-[var(--color-navy-900)] font-display">Dokumen DIPA & RKA-KL</h2>
         {isAdmin && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowParse(true)}
-              className="bg-[var(--color-gold-500)] text-white px-4 py-2 rounded-xl hover:bg-[var(--color-gold-600)] transition flex items-center gap-2 text-sm"
-            >
-              <Sparkles size={16} /> AI Parse
-            </button>
-            <button
-              onClick={openAdd}
-              className="bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-xl hover:bg-[var(--color-navy-800)] transition flex items-center gap-2 text-sm"
-            >
-              <Plus size={16} /> Upload Revisi
-            </button>
-          </div>
+          <button
+            onClick={openAdd}
+            className="bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-xl hover:bg-[var(--color-navy-800)] transition flex items-center gap-2 text-sm"
+          >
+            <Plus size={16} /> Upload Revisi
+          </button>
         )}
       </div>
 
@@ -351,100 +287,6 @@ export default function DipaClient({
             </button>
           </div>
         </form>
-      </Modal>
-      <Modal
-        isOpen={showParse}
-        onClose={() => {
-          setShowParse(false)
-          setParseText('')
-          setParseResults([])
-        }}
-        title="AI Parse Dokumen DIPA"
-      >
-        <div className="space-y-4">
-          <p className="text-[12.5px] text-[var(--color-ink-500)]">
-            Tempel teks dari dokumen DIPA/RKA-KL. AI akan mengekstrak kode MAK, uraian, dan pagu secara otomatis.
-          </p>
-          <div>
-            <label htmlFor="parse-revisi" className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">
-              Revisi Ke <span className="text-rose-600" aria-label="wajib diisi">*</span>
-            </label>
-            <input
-              id="parse-revisi"
-              type="number"
-              value={parseRevisi}
-              onChange={(e) => setParseRevisi(Number(e.target.value))}
-              min={0}
-              className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
-            />
-          </div>
-          <div>
-            <label htmlFor="parse-text" className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">
-              Teks Dokumen
-            </label>
-            <textarea
-              id="parse-text"
-              value={parseText}
-              onChange={(e) => setParseText(e.target.value)}
-              rows={8}
-              placeholder="Tempel isi dokumen DIPA di sini..."
-              className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none resize-none font-mono"
-            />
-          </div>
-          {parseResults.length === 0 ? (
-            <button
-              onClick={handleAiParse}
-              disabled={parseLoading}
-              className="w-full py-2.5 bg-[var(--color-gold-500)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-gold-600)] transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Sparkles size={16} />
-              {parseLoading ? 'Memproses...' : 'Ekstrak dengan AI'}
-            </button>
-          ) : (
-            <>
-              <div className="border border-[var(--color-surface-200)] rounded-lg overflow-hidden max-h-60 overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-[var(--color-surface-50)] sticky top-0">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-semibold">Kode MAK</th>
-                      <th className="text-left px-3 py-2 font-semibold">Uraian</th>
-                      <th className="text-right px-3 py-2 font-semibold">Pagu</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-surface-200)]">
-                    {parseResults.map((r, i) => (
-                      <tr key={i}>
-                        <td className="px-3 py-2 font-mono">{r.kode_mak}</td>
-                        <td className="px-3 py-2 truncate max-w-[150px]">{r.uraian || '-'}</td>
-                        <td className="px-3 py-2 text-right font-medium">
-                          {new Intl.NumberFormat('id-ID').format(r.pagu)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-[11.5px] text-[var(--color-ink-500)]">
-                Ditemukan {parseResults.length} mata anggaran. Simpan ke revisi {parseRevisi}?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setParseResults([])}
-                  className="flex-1 border border-[var(--color-surface-200)] px-4 py-2 rounded-lg hover:bg-[var(--color-surface-100)] transition text-sm"
-                >
-                  Ulangi
-                </button>
-                <button
-                  onClick={handleSaveParseResults}
-                  disabled={parseLoading}
-                  className="flex-1 bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-navy-800)] transition disabled:opacity-50 text-sm"
-                >
-                  {parseLoading ? 'Menyimpan...' : 'Simpan Semua'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
       </Modal>
     </div>
   )

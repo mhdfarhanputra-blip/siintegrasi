@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Wallet, Plus, Trash2, Download, Pencil } from 'lucide-react'
@@ -61,6 +61,9 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+
+  // Sync server data ke local state saat router.refresh() selesai
+  useEffect(() => { setData(initialData) }, [initialData])
 
   useRealtime('keuangan')
 

@@ -1,6 +1,6 @@
-﻿'use client'
+'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Pencil, Download } from 'lucide-react'
@@ -34,6 +34,8 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => { setData(initialData) }, [initialData])
 
   useRealtime('persediaan')
 
