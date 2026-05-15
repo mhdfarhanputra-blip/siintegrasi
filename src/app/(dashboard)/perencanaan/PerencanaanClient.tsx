@@ -21,6 +21,7 @@ import { showError, showSuccess } from '@/lib/toast'
 interface DipaRow {
   id: string
   revisi_ke: number
+  tanggal_revisi: string | null
   link_dipa: string | null
   link_rkakl: string | null
   keterangan_revisi: string | null
@@ -380,7 +381,9 @@ function KronologiTab({ data }: { data: DipaRow[] }) {
       </div>
       <ol className="space-y-3">
         {data.map((row, idx) => {
-          const interval = idx > 0 ? diffDays(row.created_at, data[idx - 1].created_at) : null
+          const dateA = row.tanggal_revisi || row.created_at
+          const dateB = idx > 0 ? (data[idx - 1].tanggal_revisi || data[idx - 1].created_at) : null
+          const interval = idx > 0 && dateB ? diffDays(dateA, dateB) : null
           return (
             <li key={row.id} className="relative pl-6">
               <span className="absolute left-0 top-1.5 w-3 h-3 rounded-full bg-[var(--color-gold-500)] ring-4 ring-[var(--color-gold-500)]/20" />

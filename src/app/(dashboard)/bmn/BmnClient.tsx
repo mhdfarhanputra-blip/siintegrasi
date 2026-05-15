@@ -21,6 +21,8 @@ interface BmnRow {
   pengguna: string | null
   status_penggunaan: string
   link_foto: string | null
+  tahun_pengadaan: number | null
+  tahun_pencatatan: number | null
   updated_at: string
 }
 
@@ -38,7 +40,9 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<BmnRow | null>(null)
   const [search, setSearch] = useState('')
+  const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [loading, setLoading] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
   const [linkFoto, setLinkFoto] = useState<string | null>(null)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -47,7 +51,38 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
 
   useRealtime('bmn')
 
+  async function handleImportFromPrevYear() {
+    if (!confirmAction(`Import data BMN dari TA ${tahunFilter - 1} ke TA ${tahunFilter}? Data akan diduplikasi dengan kondisi yang bisa diupdate.`)) return
+    setImportLoading(true)
+    try {
+      const { data: prevData, error: fetchErr } = await supabase
+        .from('bmn')
+        .select('kode_aset, nama_aset, spesifikasi, kondisi, nilai_aset, lokasi, pengguna, status_penggunaan, link_foto, tahun_pengadaan')
+        .eq('tahun_pencatatan', tahunFilter - 1)
+      if (fetchErr) throw fetchErr
+      if (!prevData || prevData.length === 0) {
+        showError('Tidak ada data', `Tidak ditemukan data BMN di TA ${tahunFilter - 1}`)
+        return
+      }
+      const newRows = prevData.map((r) => ({
+        ...r,
+        tahun_pencatatan: tahunFilter,
+        updated_at: new Date().toISOString(),
+      }))
+      const { error: insertErr } = await supabase.from('bmn').insert(newRows)
+      if (insertErr) throw insertErr
+      showSuccess(`${newRows.length} aset berhasil diimport dari TA ${tahunFilter - 1}`)
+      router.refresh()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
+      showError('Gagal import', msg)
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
   const filtered = data.filter((d) => {
+    if (d.tahun_pencatatan !== tahunFilter) return false
     const q = search.toLowerCase()
     return (
       d.nama_aset.toLowerCase().includes(q) ||
@@ -82,6 +117,8 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
       lokasi: (form.get('lokasi') as string) || null,
       pengguna: (form.get('pengguna') as string) || null,
       status_penggunaan: form.get('status_penggunaan') as string,
+      tahun_pengadaan: Number(form.get('tahun_pengadaan')) || null,
+      tahun_pencatatan: tahunFilter,
       link_foto: linkFoto,
     }
 
@@ -125,6 +162,13 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
         <h2 className="text-2xl font-bold text-[var(--color-navy-900)]">Barang Milik Negara</h2>
         <div className="flex flex-wrap gap-2">
           <button
+            onClick={handleImportFromPrevYear}
+            disabled={importLoading}
+            className="border border-[var(--color-surface-200)] text-[var(--color-ink-700)] px-4 py-2 rounded-lg hover:bg-[var(--color-surface-100)] transition flex items-center gap-2 text-sm disabled:opacity-50"
+          >
+            {importLoading ? 'Mengimport...' : `Import dari TA ${tahunFilter - 1}`}
+          </button>
+          <button
             onClick={openAdd}
             className="bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-navy-800)] transition flex items-center gap-2 text-sm"
           >
@@ -140,8 +184,20 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
         </div>
       </div>
 
-      <div className="mb-4 w-full sm:max-w-xs">
-        <SearchInput value={search} onChange={setSearch} placeholder="Cari aset..." />
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <select
+          value={tahunFilter}
+          onChange={(e) => setTahunFilter(Number(e.target.value))}
+          className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+        >
+          {[2024, 2025, 2026, 2027].map((y) => (
+            <option key={y} value={y}>TA {y}</option>
+          ))}
+        </select>
+        <div className="w-full sm:max-w-xs">
+          <SearchInput value={search} onChange={setSearch} placeholder="Cari aset..." />
+        </div>
+        <span className="text-[11px] text-[var(--color-ink-500)]">{filtered.length} aset</span>
       </div>
 
       {filtered.length === 0 ? (
@@ -349,6 +405,24 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
                 className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
               />
             </div>
+          </div>
+          <div>
+            <label
+              htmlFor={editing ? 'edit-tahun-pengadaan' : 'add-tahun-pengadaan'}
+              className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
+            >
+              Tahun Pengadaan
+            </label>
+            <input
+              id={editing ? 'edit-tahun-pengadaan' : 'add-tahun-pengadaan'}
+              type="number"
+              name="tahun_pengadaan"
+              defaultValue={editing?.tahun_pengadaan ?? ''}
+              min={2000}
+              max={2030}
+              placeholder="2024"
+              className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
+            />
           </div>
           <div>
             <label

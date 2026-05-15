@@ -9,7 +9,7 @@ export default async function PerencanaanPage() {
 
   const { data: dipa } = await supabase
     .from('dokumen_dipa')
-    .select('id, revisi_ke, link_dipa, link_rkakl, keterangan_revisi, created_at')
+    .select('id, revisi_ke, tanggal_revisi, link_dipa, link_rkakl, keterangan_revisi, created_at')
     .order('revisi_ke', { ascending: true })
 
   return (
