@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SI Terintegrasi P2JN
 
-## Getting Started
+Aplikasi dashboard operasional untuk Satker P2JN Bangka Belitung. Modul utama mencakup keuangan, persediaan, BMN, utilitas, DIPA/RKA-KL, perencanaan, pengguna, audit log, notifikasi, tracking publik, upload dokumen, dan asisten AI.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- Tailwind CSS 4
+- Supabase Auth, Database, RLS, Storage
+- Cloudinary untuk upload dokumen umum
+- DeepSeek API untuk asisten AI dan parser dokumen
+
+## Menjalankan Lokal
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Buat `.env.local` dengan variabel berikut:
 
-## Learn More
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
-To learn more about Next.js, take a look at the following resources:
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+DEEPSEEK_API_KEY=
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Jangan expose `SUPABASE_SERVICE_ROLE_KEY`, `CLOUDINARY_API_SECRET`, atau `DEEPSEEK_API_KEY` ke client.
 
-## Deploy on Vercel
+## Database
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Skema dan migration ada di `src/lib/supabase/`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Urutan migration saat setup database baru:
+
+```text
+schema.sql
+migration_v3.sql
+migration_v4.sql
+migration_v5.sql
+migration_v6.sql
+migration_v7.sql
+```
+
+`migration_v7.sql` memperketat akses role/RLS. Pastikan migration ini dijalankan di Supabase sebelum aplikasi dipakai oleh banyak role.
+
+## Role Akses
+
+- `Admin`: semua modul, pengguna, audit, upload realisasi
+- `Bendahara`: keuangan, persediaan, DIPA, perencanaan
+- `BMN`: BMN, persediaan, DIPA, perencanaan
+- `Teknis`: utilitas, DIPA, perencanaan
+- `Perencanaan`: utilitas, DIPA, perencanaan
+- `Pengusul`: dashboard dan utilitas miliknya sendiri
+
+Aturan ini diterapkan di route proxy, halaman server, API export, dan RLS.
+
+## Verifikasi
+
+```bash
+npm run lint
+npm run build
+```
+
+Build membutuhkan akses network karena `next/font/google` mengambil Inter dan Plus Jakarta Sans dari Google Fonts.
+
+## Roadmap
+
+Lihat `docs/ROADMAP.md` untuk ide pengembangan modul dan prioritas implementasi.
+

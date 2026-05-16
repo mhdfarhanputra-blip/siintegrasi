@@ -1,12 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { canAccessModule, moduleForPath } from '@/lib/access'
 
 const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/callback']
 const PUBLIC_PREFIXES = ['/track/']
-const ADMIN_ONLY_ROUTES = ['/pengguna', '/audit']
-const NON_PENGUSUL_ROUTES = ['/dipa', '/perencanaan', '/keuangan', '/persediaan', '/bmn']
 
-export async function middleware(request: NextRequest) {
+export async function authProxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -31,7 +30,6 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // Rute publik (tracking) dilewati tanpa cek sesi.
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
     return supabaseResponse
   }
@@ -55,20 +53,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/pending', request.url))
     }
 
-    const role = profile?.role ?? 'Pengusul'
-
-    if (ADMIN_ONLY_ROUTES.some((r) => pathname.startsWith(r)) && role !== 'Admin') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-
-    if (role === 'Pengusul' && NON_PENGUSUL_ROUTES.some((r) => pathname.startsWith(r))) {
+    const routeModule = moduleForPath(pathname)
+    if (routeModule && !canAccessModule(profile?.role, routeModule)) {
       return NextResponse.redirect(new URL('/', request.url))
     }
   }
 
   return supabaseResponse
-}
-
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*|api).*)'],
 }

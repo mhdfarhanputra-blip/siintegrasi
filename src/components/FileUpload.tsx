@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { Upload, FileCheck2, X, Link as LinkIcon, Loader2 } from 'lucide-react'
 import { showError } from '@/lib/toast'
+import { safeHttpUrl } from '@/lib/safeUrl'
 
 interface FileUploadProps {
   label?: string
@@ -18,15 +19,6 @@ interface FileUploadProps {
 const MAX_DISPLAY_SIZE = 50 * 1024 * 1024
 const MAX_IMAGE_BYTES = 1 * 1024 * 1024 // Target max 1 MB untuk gambar
 const MAX_IMAGE_DIM = 1920 // Max dimensi pixel
-
-function isSafeUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
-  } catch {
-    return false
-  }
-}
 
 /**
  * Kompres gambar di browser menggunakan Canvas API.
@@ -152,7 +144,9 @@ export default function FileUpload({
     }
   }, [modul, onChange])
 
-  if (value && isSafeUrl(value)) {
+  const displayUrl = safeHttpUrl(value)
+
+  if (displayUrl) {
     return (
       <div className="space-y-1.5">
         {label && (
@@ -163,12 +157,12 @@ export default function FileUpload({
         <div className="flex items-center gap-2 p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
           <FileCheck2 size={16} className="text-emerald-600 flex-shrink-0" />
           <a
-            href={value}
+            href={displayUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 text-[12.5px] text-emerald-800 font-medium truncate hover:underline"
           >
-            {value.length > 60 ? value.slice(0, 60) + '...' : value}
+            {displayUrl.length > 60 ? displayUrl.slice(0, 60) + '...' : displayUrl}
           </a>
           <button
             type="button"

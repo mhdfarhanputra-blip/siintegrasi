@@ -7,6 +7,8 @@ const DEFAULT_SYSTEM_PROMPT =
   'Kamu adalah asisten Bahasa Indonesia untuk aplikasi SI Terintegrasi. Jawab singkat, jelas, dan sopan.'
 const DEFAULT_TEMPERATURE = 0.6
 const DEFAULT_MAX_TOKENS = 2048
+const MAX_PROMPT_CHARS = 4000
+const MAX_CONTEXT_CHARS = 2000
 
 async function requireActiveUser() {
   const cookieStore = await cookies()
@@ -46,6 +48,9 @@ export async function POST(request: Request) {
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json({ error: 'Prompt diperlukan' }, { status: 400 })
     }
+    if (prompt.length > MAX_PROMPT_CHARS) {
+      return NextResponse.json({ error: 'Prompt terlalu panjang' }, { status: 400 })
+    }
 
     const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey) {
@@ -61,7 +66,10 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: context || DEFAULT_SYSTEM_PROMPT },
+          { role: 'system', content: DEFAULT_SYSTEM_PROMPT },
+          ...(typeof context === 'string' && context.trim()
+            ? [{ role: 'user' as const, content: `Konteks aplikasi:\n${context.slice(0, MAX_CONTEXT_CHARS)}` }]
+            : []),
           { role: 'user', content: prompt },
         ],
         temperature: DEFAULT_TEMPERATURE,

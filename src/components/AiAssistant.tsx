@@ -64,7 +64,7 @@ export default function AiAssistant() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-[var(--color-gold-500)] to-[var(--color-gold-700)] text-white shadow-lg shadow-black/20 flex items-center justify-center hover:scale-105 active:scale-95 transition"
+        className="fixed bottom-20 md:bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-[var(--color-gold-500)] to-[var(--color-gold-700)] text-white shadow-lg shadow-black/20 flex items-center justify-center hover:scale-105 active:scale-95 transition"
         aria-label={open ? 'Tutup asisten AI' : 'Buka asisten AI'}
       >
         {open ? <X size={20} /> : <Sparkles size={20} />}
@@ -72,7 +72,7 @@ export default function AiAssistant() {
 
       {open && (
         <div
-          className="fixed bottom-24 right-5 z-40 w-[calc(100vw-2.5rem)] sm:w-[380px] max-h-[70vh] bg-white rounded-2xl border border-[var(--color-surface-200)] shadow-xl flex flex-col overflow-hidden fade-in"
+          className="fixed bottom-36 md:bottom-24 right-5 z-40 w-[calc(100vw-2.5rem)] sm:w-[380px] max-h-[65vh] bg-white rounded-2xl border border-[var(--color-surface-200)] shadow-xl flex flex-col overflow-hidden fade-in"
           role="dialog"
           aria-label="Asisten AI"
         >

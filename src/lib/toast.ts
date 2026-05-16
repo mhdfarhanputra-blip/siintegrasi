@@ -1,4 +1,5 @@
 import { toast } from 'sonner'
+import { confirmDialog } from '@/components/ConfirmDialog'
 
 const DEFAULT_DURATION_MS = 4000
 
@@ -18,7 +19,19 @@ export function showWarning(message: string, description?: string) {
   toast.warning(message, { description, duration: DEFAULT_DURATION_MS })
 }
 
+/**
+ * Konfirmasi sinkron klasik (untuk backward-compatibility).
+ * Untuk dialog modern berbranding gunakan confirmActionAsync.
+ */
 export function confirmAction(message: string): boolean {
   if (typeof window === 'undefined') return false
   return window.confirm(message)
+}
+
+/**
+ * Konfirmasi dialog modern dengan styling konsisten aplikasi.
+ * Wajib pakai await karena async.
+ */
+export function confirmActionAsync(message: string, title = 'Konfirmasi'): Promise<boolean> {
+  return confirmDialog({ title, message, tone: 'danger' })
 }

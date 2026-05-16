@@ -55,7 +55,9 @@ export default function NotificationBell() {
   }, [])
 
   useEffect(() => {
-    load()
+    queueMicrotask(() => {
+      void load()
+    })
     const id = setInterval(load, POLL_MS)
     return () => clearInterval(id)
   }, [load])

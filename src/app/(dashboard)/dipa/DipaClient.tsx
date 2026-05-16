@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, FileText, Download, Trash2, Pencil } from 'lucide-react'
@@ -8,6 +8,7 @@ import Modal from '@/components/Modal'
 import FileUpload from '@/components/FileUpload'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmAction } from '@/lib/toast'
+import { safeHttpUrl } from '@/lib/safeUrl'
 
 interface DipaRow {
   id: string
@@ -23,17 +24,6 @@ interface DipaRow {
 
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-
-const safeHttpUrl = (url: string | null | undefined): string | null => {
-  if (!url) return null
-  try {
-    const parsed = new URL(url, 'http://_')
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return url
-    return null
-  } catch {
-    return null
-  }
-}
 
 export default function DipaClient({
   initialData,
@@ -52,8 +42,6 @@ export default function DipaClient({
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const isAdmin = userRole === 'Admin'
-
-  useEffect(() => { setData(initialData) }, [initialData])
 
   useRealtime('dokumen_dipa')
 

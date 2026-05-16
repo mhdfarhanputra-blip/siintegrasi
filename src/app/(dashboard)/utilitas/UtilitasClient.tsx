@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
@@ -22,6 +22,7 @@ import FileUpload from '@/components/FileUpload'
 import SearchInput from '@/components/SearchInput'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmAction } from '@/lib/toast'
+import { safeHttpUrl } from '@/lib/safeUrl'
 
 interface UtilitasRow {
   id: string
@@ -106,9 +107,6 @@ export default function UtilitasClient({
   const [noteTarget, setNoteTarget] = useState<{ row: UtilitasRow; op: Operator } | null>(null)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-
-  // Realtime: auto-refresh saat ada perubahan di tabel utilitas
-  useEffect(() => { setData(initialData) }, [initialData])
 
   useRealtime('utilitas')
 
@@ -540,9 +538,9 @@ function UtilitasCard({
         </span>
       </div>
 
-      {row.link_ded && (
+      {safeHttpUrl(row.link_ded) && (
         <a
-          href={row.link_ded}
+          href={safeHttpUrl(row.link_ded)!}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}

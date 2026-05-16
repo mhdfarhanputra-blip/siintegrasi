@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Trash2, Shield, Pencil, Check, X, Ban, UserCheck } from 'lucide-react'
 import Modal from '@/components/Modal'
@@ -53,8 +52,6 @@ export default function PenggunaClient({ initialData, currentUserId }: PenggunaC
   const [editing, setEditing] = useState<ProfileRow | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-
-  useEffect(() => { setData(initialData) }, [initialData])
 
   useRealtime('profiles')
 

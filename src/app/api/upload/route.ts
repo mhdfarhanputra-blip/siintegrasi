@@ -5,12 +5,11 @@ export const runtime = 'nodejs'
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB
 
-const ALLOWED_TYPES = [
+const ALLOWED_TYPES = new Set([
   'application/pdf',
   'image/jpeg',
   'image/png',
   'image/webp',
-  'image/gif',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -18,8 +17,40 @@ const ALLOWED_TYPES = [
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/zip',
   'application/x-rar-compressed',
-  'application/octet-stream',
-]
+])
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.xlsx',
+  '.xls',
+  '.docx',
+  '.doc',
+  '.pptx',
+  '.zip',
+  '.rar',
+])
+
+const BLOCKED_EXTENSIONS = new Set(['.svg', '.html', '.htm', '.js', '.mjs', '.ts', '.tsx', '.jsx', '.php', '.exe', '.bat', '.cmd', '.ps1'])
+
+function fileExtension(name: string): string {
+  const idx = name.lastIndexOf('.')
+  return idx >= 0 ? name.slice(idx).toLowerCase() : ''
+}
+
+async function hasAllowedSignature(file: File, ext: string): Promise<boolean> {
+  const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer())
+  const starts = (...sig: number[]) => sig.every((b, i) => bytes[i] === b)
+  if (ext === '.pdf') return starts(0x25, 0x50, 0x44, 0x46)
+  if (ext === '.jpg' || ext === '.jpeg') return starts(0xff, 0xd8, 0xff)
+  if (ext === '.png') return starts(0x89, 0x50, 0x4e, 0x47)
+  if (ext === '.webp') return starts(0x52, 0x49, 0x46, 0x46)
+  if (['.xlsx', '.docx', '.pptx', '.zip'].includes(ext)) return starts(0x50, 0x4b)
+  return true
+}
 
 /**
  * Bangun folder path: SI_Terintegrasi/{modul}/{tahun}/{bulan}
@@ -95,14 +126,21 @@ export async function POST(request: Request) {
     if (!file) {
       return NextResponse.json({ error: 'File tidak ditemukan' }, { status: 400 })
     }
+    const ext = fileExtension(file.name)
+    if (!ext || BLOCKED_EXTENSIONS.has(ext) || !ALLOWED_EXTENSIONS.has(ext)) {
+      return NextResponse.json({ error: 'Ekstensi file tidak didukung.' }, { status: 400 })
+    }
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: 'Ukuran file melebihi 50 MB' }, { status: 400 })
     }
-    if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/')) {
+    if (!ALLOWED_TYPES.has(file.type)) {
       return NextResponse.json(
         { error: 'Tipe file tidak didukung.' },
         { status: 400 },
       )
+    }
+    if (!(await hasAllowedSignature(file, ext))) {
+      return NextResponse.json({ error: 'Isi file tidak sesuai dengan ekstensi.' }, { status: 400 })
     }
 
     const folder = buildFolder(modul)

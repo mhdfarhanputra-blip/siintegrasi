@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Pencil, Download } from 'lucide-react'
@@ -37,8 +37,6 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => { setData(initialData) }, [initialData])
-
   useRealtime('persediaan')
 
   const filtered = data.filter((d) => {
@@ -51,7 +49,19 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
     )
   })
 
-  const latestSaldo = data.length > 0 ? data[0].stok_saldo : 0
+  const latestByItem = useMemo(() => {
+    const latest = new Map<string, PersediaanRow>()
+    const rows = [...data]
+      .filter((d) => !d.tahun_anggaran || d.tahun_anggaran === tahunFilter)
+      .sort((a, b) => +new Date(b.created_at || b.tanggal) - +new Date(a.created_at || a.tanggal))
+    rows.forEach((row) => {
+      const key = row.nama_barang.trim().toLowerCase()
+      if (key && !latest.has(key)) latest.set(key, row)
+    })
+    return latest
+  }, [data, tahunFilter])
+
+  const totalSaldo = [...latestByItem.values()].reduce((sum, row) => sum + (row.stok_saldo ?? 0), 0)
 
   const openAdd = () => {
     setEditing(null)
@@ -69,13 +79,15 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
     const form = new FormData(e.currentTarget)
     const jenis = form.get('jenis') as string
     const jumlah = Number(form.get('jumlah'))
+    const namaBarang = (form.get('nama_barang') as string).trim()
+    const itemKey = namaBarang.toLowerCase()
 
     try {
       if (editing) {
         const payload = {
           tanggal: form.get('tanggal') as string,
           jenis,
-          nama_barang: form.get('nama_barang') as string,
+          nama_barang: namaBarang,
           supplier_tujuan: (form.get('supplier_tujuan') as string) || null,
           jumlah,
           satuan: form.get('satuan') as string,
@@ -85,16 +97,22 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
         if (error) throw error
         showSuccess('Data persediaan berhasil diperbarui')
       } else {
-        const newSaldo = jenis === 'Masuk' ? latestSaldo + jumlah : latestSaldo - jumlah
+        const previousSaldo = latestByItem.get(itemKey)?.stok_saldo ?? 0
+        const newSaldo = jenis === 'Masuk' ? previousSaldo + jumlah : previousSaldo - jumlah
+        if (newSaldo < 0) {
+          showError('Stok tidak mencukupi', `Saldo ${namaBarang || 'barang'} saat ini ${previousSaldo}.`)
+          return
+        }
         const payload = {
           tanggal: form.get('tanggal') as string,
           jenis,
-          nama_barang: form.get('nama_barang') as string,
+          nama_barang: namaBarang,
           supplier_tujuan: (form.get('supplier_tujuan') as string) || null,
           jumlah,
           satuan: form.get('satuan') as string,
           stok_saldo: newSaldo,
           stok_minimum: Number(form.get('stok_minimum') ?? 0) || 0,
+          tahun_anggaran: tahunFilter,
         }
         const { error } = await supabase.from('persediaan').insert(payload)
         if (error) throw error
@@ -158,7 +176,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
         </div>
         <div className="bg-white rounded-xl p-6 shadow-sm border border-[var(--color-surface-200)]">
           <p className="text-sm text-[var(--color-ink-500)]">Saldo Stok Terakhir</p>
-          <p className="text-xl font-bold text-[var(--color-navy-900)]">{latestSaldo}</p>
+          <p className="text-xl font-bold text-[var(--color-navy-900)]">{totalSaldo}</p>
         </div>
       </div>
 

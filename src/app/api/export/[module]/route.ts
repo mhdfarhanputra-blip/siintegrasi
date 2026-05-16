@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { canAccessModule, type ModuleKey } from '@/lib/access'
 
 const VALID_MODULES = ['keuangan', 'persediaan', 'bmn', 'utilitas'] as const
 
@@ -15,6 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ modu
   if (!VALID_MODULES.includes(module as typeof VALID_MODULES[number])) {
     return NextResponse.json({ error: 'Modul tidak valid' }, { status: 400 })
   }
+  const moduleKey = module as ModuleKey
 
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -46,8 +48,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ modu
   if (profile?.status !== 'Aktif') {
     return NextResponse.json({ error: 'Akun Anda belum aktif' }, { status: 403 })
   }
-  if (profile?.role === 'Pengusul') {
-    return NextResponse.json({ error: 'Pengusul tidak memiliki akses ekspor' }, { status: 403 })
+  if (!canAccessModule(profile?.role, moduleKey) || profile?.role === 'Pengusul') {
+    return NextResponse.json({ error: 'Role Anda tidak memiliki akses ekspor modul ini' }, { status: 403 })
   }
 
   const { data, error } = await supabase.from(module).select('*')

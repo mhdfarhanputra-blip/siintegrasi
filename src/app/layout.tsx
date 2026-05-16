@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { Toaster } from 'sonner'
+import ConfirmDialogProvider from '@/components/ConfirmDialog'
 import './globals.css'
 
 const inter = Inter({
@@ -53,6 +54,7 @@ export default function RootLayout({
           Lompat ke konten utama
         </a>
         {children}
+        <ConfirmDialogProvider />
         <Toaster
           position="bottom-right"
           richColors

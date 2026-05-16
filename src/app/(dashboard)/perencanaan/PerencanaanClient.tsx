@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess } from '@/lib/toast'
+import { safeHttpUrl } from '@/lib/safeUrl'
 
 interface DipaRow {
   id: string
@@ -45,9 +46,6 @@ type TabKey = 'dashboard' | 'detail' | 'kronologi'
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 
-const formatRupiah = (n: number) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n)
-
 const formatShort = (n: number) => {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)} M`
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} Jt`
@@ -57,14 +55,6 @@ const formatShort = (n: number) => {
 
 function diffDays(a: string, b: string): number {
   return Math.round(Math.abs(new Date(a).getTime() - new Date(b).getTime()) / 86400000)
-}
-
-function safeHref(url: string | null | undefined): string | null {
-  if (!url) return null
-  try {
-    const p = new URL(url, 'https://x.invalid')
-    return p.protocol === 'https:' || p.protocol === 'http:' ? p.toString() : null
-  } catch { return null }
 }
 
 export default function PerencanaanClient({
@@ -188,7 +178,7 @@ export default function PerencanaanClient({
         <TabBtn active={activeTab === 'kronologi'} onClick={() => setActiveTab('kronologi')} label="Kronologi Revisi" />
       </div>
 
-      {activeTab === 'dashboard' && <DashboardTab data={excelData} summary={summary} />}
+      {activeTab === 'dashboard' && <DashboardTab summary={summary} />}
       {activeTab === 'detail' && <DetailTab data={excelData} />}
       {activeTab === 'kronologi' && <KronologiTab data={data} />}
     </div>
@@ -214,7 +204,7 @@ function StatCard({ icon, label, value, hint, accent }: { icon: React.ReactNode;
   )
 }
 
-function DashboardTab({ data, summary }: { data: RealisasiExcelRow[]; summary: { komponen: RealisasiExcelRow[]; akun: RealisasiExcelRow[]; belumRealisasi: RealisasiExcelRow[] } }) {
+function DashboardTab({ summary }: { summary: { komponen: RealisasiExcelRow[]; akun: RealisasiExcelRow[]; belumRealisasi: RealisasiExcelRow[] } }) {
   const topKomponen = useMemo(() =>
     [...summary.komponen].sort((a, b) => b.realisasi_sd - a.realisasi_sd).slice(0, 10),
   [summary.komponen])
@@ -395,8 +385,8 @@ function KronologiTab({ data }: { data: DipaRow[] }) {
               </div>
               <p className="text-[12px] text-[var(--color-ink-700)] mt-1">{row.keterangan_revisi || 'Tidak ada keterangan.'}</p>
               <div className="mt-2 flex gap-3">
-                {safeHref(row.link_dipa) && <a href={safeHref(row.link_dipa)!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11.5px] text-[var(--color-navy-900)] hover:text-[var(--color-gold-600)]"><Download size={12} /> DIPA</a>}
-                {safeHref(row.link_rkakl) && <a href={safeHref(row.link_rkakl)!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11.5px] text-[var(--color-navy-900)] hover:text-[var(--color-gold-600)]"><Download size={12} /> RKA-KL</a>}
+                {safeHttpUrl(row.link_dipa) && <a href={safeHttpUrl(row.link_dipa)!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11.5px] text-[var(--color-navy-900)] hover:text-[var(--color-gold-600)]"><Download size={12} /> DIPA</a>}
+                {safeHttpUrl(row.link_rkakl) && <a href={safeHttpUrl(row.link_rkakl)!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11.5px] text-[var(--color-navy-900)] hover:text-[var(--color-gold-600)]"><Download size={12} /> RKA-KL</a>}
               </div>
             </li>
           )

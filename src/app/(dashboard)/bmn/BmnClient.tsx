@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Pencil, Download, MapPin, User } from 'lucide-react'
@@ -46,8 +46,6 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
   const [linkFoto, setLinkFoto] = useState<string | null>(null)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-
-  useEffect(() => { setData(initialData) }, [initialData])
 
   useRealtime('bmn')
 

@@ -1,15 +1,15 @@
 import { createServerSupabase } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/getCurrentUser'
+import { canAccessModule } from '@/lib/access'
+import { redirect } from 'next/navigation'
 import UtilitasClient from './UtilitasClient'
 
 export default async function UtilitasPage() {
+  const me = await getCurrentUser()
+  if (!canAccessModule(me?.role, 'utilitas')) redirect('/')
+
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user?.id ?? '')
-    .single()
 
   const { data: utilitas } = await supabase
     .from('utilitas')
@@ -26,7 +26,8 @@ export default async function UtilitasPage() {
       initialData={utilitas || []}
       initialTransmital={transmital || []}
       currentUserId={user?.id ?? ''}
-      userRole={profile?.role ?? 'Pengusul'}
+      key={`${utilitas?.length ?? 0}:${utilitas?.[0]?.id ?? 'empty'}:${transmital?.length ?? 0}`}
+      userRole={me?.role ?? 'Pengusul'}
     />
   )
 }
