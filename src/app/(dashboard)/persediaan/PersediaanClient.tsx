@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Pencil, Download } from 'lucide-react'
+import { Plus, Trash2, Pencil, Download, FileImage } from 'lucide-react'
 import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
+import FileUpload from '@/components/FileUpload'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
@@ -20,6 +21,7 @@ interface PersediaanRow {
   stok_saldo: number
   stok_minimum: number | null
   tahun_anggaran: number | null
+  link_dokumentasi: string | null
   input_by: string | null
   created_at: string
 }
@@ -34,6 +36,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
   const [search, setSearch] = useState('')
   const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [loading, setLoading] = useState(false)
+  const [linkDokumentasi, setLinkDokumentasi] = useState<string | null>(null)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -65,11 +68,13 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
 
   const openAdd = () => {
     setEditing(null)
+    setLinkDokumentasi(null)
     setShowForm(true)
   }
 
   const openEdit = (row: PersediaanRow) => {
     setEditing(row)
+    setLinkDokumentasi(row.link_dokumentasi)
     setShowForm(true)
   }
 
@@ -92,6 +97,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
           jumlah,
           satuan: form.get('satuan') as string,
           stok_minimum: Number(form.get('stok_minimum') ?? 0) || 0,
+          link_dokumentasi: linkDokumentasi,
         }
         const { error } = await supabase.from('persediaan').update(payload).eq('id', editing.id)
         if (error) throw error
@@ -113,6 +119,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
           stok_saldo: newSaldo,
           stok_minimum: Number(form.get('stok_minimum') ?? 0) || 0,
           tahun_anggaran: tahunFilter,
+          link_dokumentasi: linkDokumentasi,
         }
         const { error } = await supabase.from('persediaan').insert(payload)
         if (error) throw error
@@ -400,6 +407,14 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
               Sistem akan memberi notifikasi saat saldo &le; nilai ini.
             </p>
           </div>
+          <FileUpload
+            label="Dokumentasi Barang"
+            value={linkDokumentasi}
+            onChange={setLinkDokumentasi}
+            helperText="Unggah foto atau dokumentasi barang persediaan."
+            id={editing ? 'edit-link-dokumentasi' : 'add-link-dokumentasi'}
+            modul="Persediaan"
+          />
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"

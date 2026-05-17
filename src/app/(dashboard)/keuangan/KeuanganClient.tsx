@@ -1,12 +1,13 @@
 ﻿'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Wallet, Plus, Trash2, Download, Pencil } from 'lucide-react'
+import { Wallet, Plus, Trash2, Download, Pencil, Receipt } from 'lucide-react'
 import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
 import Pagination from '@/components/Pagination'
+import FileUpload from '@/components/FileUpload'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
@@ -61,6 +62,8 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
   const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [linkNota, setLinkNota] = useState<string | null>(null)
+  const [currentJenis, setCurrentJenis] = useState<'Debit' | 'Kredit'>('Debit')
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -108,11 +111,15 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
 
   const openAdd = () => {
     setEditing(null)
+    setLinkNota(null)
+    setCurrentJenis('Debit')
     setShowModal(true)
   }
 
   const openEdit = (item: Keuangan) => {
     setEditing(item)
+    setLinkNota(item.link_nota)
+    setCurrentJenis(item.jenis_transaksi)
     setShowModal(true)
   }
 
@@ -127,6 +134,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
       kategori: (form.get('kategori') as string) || null,
       nominal: Number(form.get('nominal')),
       keterangan: (form.get('keterangan') as string) || null,
+      link_nota: linkNota,
       tahun_anggaran: tahunFilter,
     }
 
@@ -239,6 +247,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
               id={editing ? 'edit-jenis-transaksi' : 'add-jenis-transaksi'}
               name="jenis_transaksi"
               defaultValue={editing?.jenis_transaksi ?? 'Debit'}
+              onChange={(e) => setCurrentJenis(e.target.value as 'Debit' | 'Kredit')}
               required
               aria-required="true"
               className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
@@ -302,6 +311,16 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
               className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
             />
           </div>
+          {currentJenis === 'Kredit' && (
+            <FileUpload
+              label="Kuitansi Pembayaran"
+              value={linkNota}
+              onChange={setLinkNota}
+              helperText="Unggah kuitansi atau bukti pembayaran (wajib untuk transaksi kredit)."
+              id={editing ? 'edit-link-nota' : 'add-link-nota'}
+              modul="Keuangan"
+            />
+          )}
           <button
             type="submit"
             disabled={loading}
@@ -398,6 +417,17 @@ function TransaksiTable({
                 <td className="px-5 py-3 text-[var(--color-ink-500)] max-w-[200px] truncate">{item.keterangan ?? '-'}</td>
                 <td className="px-5 py-3">
                   <div className="flex items-center justify-center gap-2">
+                    {item.link_nota && (
+                      <a
+                        href={item.link_nota}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--color-ink-400)] hover:text-emerald-600 transition"
+                        title="Lihat kuitansi"
+                      >
+                        <Receipt size={16} />
+                      </a>
+                    )}
                     <button
                       onClick={() => onEdit(item)}
                       className="text-[var(--color-ink-400)] hover:text-[var(--color-gold-500)] transition"

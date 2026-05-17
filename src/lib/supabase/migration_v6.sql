@@ -86,3 +86,7 @@ ALTER TABLE public.bmn ADD COLUMN IF NOT EXISTS imported_from UUID REFERENCES pu
 CREATE INDEX IF NOT EXISTS keuangan_tahun_idx ON public.keuangan (tahun_anggaran);
 CREATE INDEX IF NOT EXISTS persediaan_tahun_idx ON public.persediaan (tahun_anggaran);
 CREATE INDEX IF NOT EXISTS bmn_tahun_idx ON public.bmn (tahun_pencatatan);
+
+
+-- 4. PERSEDIAAN: Dokumentasi barang ----------------------------------
+ALTER TABLE public.persediaan ADD COLUMN IF NOT EXISTS link_dokumentasi TEXT;
