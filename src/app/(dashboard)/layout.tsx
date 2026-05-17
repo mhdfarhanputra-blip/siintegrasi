@@ -3,6 +3,8 @@ import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
 import AiAssistant from '@/components/AiAssistant'
 import MobileBottomNav from '@/components/MobileBottomNav'
+import CommandPalette from '@/components/CommandPalette'
+import OfflineIndicator from '@/components/OfflineIndicator'
 import { getCurrentUser } from '@/lib/getCurrentUser'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +26,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
       <AiAssistant />
       <MobileBottomNav userRole={me.role} />
+      <CommandPalette />
+      <OfflineIndicator />
     </div>
   )
 }

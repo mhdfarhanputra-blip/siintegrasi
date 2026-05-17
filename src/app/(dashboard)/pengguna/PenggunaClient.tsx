@@ -6,7 +6,7 @@ import { Trash2, Shield, Pencil, Check, X, Ban, UserCheck } from 'lucide-react'
 import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
 import { useRealtime } from '@/lib/useRealtime'
-import { showError, showSuccess, confirmAction } from '@/lib/toast'
+import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
 interface ProfileRow {
   id: string
@@ -99,17 +99,17 @@ export default function PenggunaClient({ initialData, currentUserId }: PenggunaC
   }
 
   async function handleApprove(row: ProfileRow) {
-    if (!confirmAction(`Setujui akun ${row.nama}? Role saat ini: ${row.role}.`)) return
+    if (!(await confirmActionAsync(`Setujui akun ${row.nama}? Role saat ini: ${row.role}.`))) return
     await updateProfile(row.id, { status: 'Aktif' }, 'Akun berhasil disetujui')
   }
 
   async function handleReject(row: ProfileRow) {
-    if (!confirmAction(`Tolak dan nonaktifkan akun ${row.nama}?`)) return
+    if (!(await confirmActionAsync(`Tolak dan nonaktifkan akun ${row.nama}?`))) return
     await updateProfile(row.id, { status: 'Nonaktif' }, 'Akun ditolak')
   }
 
   async function handleReactivate(row: ProfileRow) {
-    if (!confirmAction(`Aktifkan kembali akun ${row.nama}?`)) return
+    if (!(await confirmActionAsync(`Aktifkan kembali akun ${row.nama}?`))) return
     await updateProfile(row.id, { status: 'Aktif' }, 'Akun berhasil diaktifkan kembali')
   }
 
@@ -118,7 +118,7 @@ export default function PenggunaClient({ initialData, currentUserId }: PenggunaC
       showError('Anda tidak bisa menonaktifkan akun Anda sendiri.')
       return
     }
-    if (!confirmAction(`Nonaktifkan akun ${row.nama}? Akses login-nya akan diblokir.`)) return
+    if (!(await confirmActionAsync(`Nonaktifkan akun ${row.nama}? Akses login-nya akan diblokir.`))) return
     await updateProfile(row.id, { status: 'Nonaktif' }, 'Akun berhasil dinonaktifkan')
   }
 
@@ -127,7 +127,7 @@ export default function PenggunaClient({ initialData, currentUserId }: PenggunaC
       showError('Anda tidak bisa menghapus akun Anda sendiri.')
       return
     }
-    if (!confirmAction(`Hapus akun ${row.nama} secara permanen? Tindakan ini tidak dapat dibatalkan.`)) return
+    if (!(await confirmActionAsync(`Hapus akun ${row.nama} secara permanen? Tindakan ini tidak dapat dibatalkan.`))) return
     try {
       const res = await fetch(`/api/admin/users?id=${row.id}`, { method: 'DELETE' })
       const json = await res.json().catch(() => ({}))

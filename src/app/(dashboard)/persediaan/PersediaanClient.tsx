@@ -7,7 +7,7 @@ import { Plus, Trash2, Pencil, Download } from 'lucide-react'
 import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
 import { useRealtime } from '@/lib/useRealtime'
-import { showError, showSuccess, confirmAction } from '@/lib/toast'
+import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
 interface PersediaanRow {
   id: string
@@ -130,7 +130,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
   }
 
   async function handleDelete(id: string) {
-    if (!confirmAction('Hapus data persediaan ini?')) return
+    if (!(await confirmActionAsync('Hapus data persediaan ini?'))) return
     try {
       const { error } = await supabase.from('persediaan').delete().eq('id', id)
       if (error) throw error

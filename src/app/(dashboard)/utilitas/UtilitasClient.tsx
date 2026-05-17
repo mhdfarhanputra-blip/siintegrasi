@@ -21,7 +21,7 @@ import Modal from '@/components/Modal'
 import FileUpload from '@/components/FileUpload'
 import SearchInput from '@/components/SearchInput'
 import { useRealtime } from '@/lib/useRealtime'
-import { showError, showSuccess, confirmAction } from '@/lib/toast'
+import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 import { safeHttpUrl } from '@/lib/safeUrl'
 
 interface UtilitasRow {
@@ -173,7 +173,7 @@ export default function UtilitasClient({
   }
 
   async function handleMulaiPemeriksaan(row: UtilitasRow) {
-    if (!confirmAction('Mulai proses pemeriksaan paralel Satker & Perencanaan?')) return
+    if (!(await confirmActionAsync('Mulai proses pemeriksaan paralel Satker & Perencanaan?'))) return
     try {
       const { error } = await supabase
         .from('utilitas')
@@ -195,7 +195,7 @@ export default function UtilitasClient({
   }
 
   async function handleReviewOK(row: UtilitasRow, op: Operator) {
-    if (!confirmAction(`Tandai review ${op === 'satker' ? 'Satker P2JN' : 'Perencanaan'} sebagai OK?`)) return
+    if (!(await confirmActionAsync(`Tandai review ${op === 'satker' ? 'Satker P2JN' : 'Perencanaan'} sebagai OK?`))) return
     const patch =
       op === 'satker'
         ? {
@@ -249,7 +249,7 @@ export default function UtilitasClient({
   }
 
   async function handleResubmitRevisi(row: UtilitasRow) {
-    if (!confirmAction('Kirim ulang permohonan setelah revisi? Pemeriksaan akan dimulai dari awal.')) return
+    if (!(await confirmActionAsync('Kirim ulang permohonan setelah revisi? Pemeriksaan akan dimulai dari awal.'))) return
     try {
       const { error } = await supabase
         .from('utilitas')
@@ -272,7 +272,7 @@ export default function UtilitasClient({
   }
 
   async function handleTolakFinal(row: UtilitasRow) {
-    if (!confirmAction('Tolak permohonan secara final? Status akan menjadi DITOLAK.')) return
+    if (!(await confirmActionAsync('Tolak permohonan secara final? Status akan menjadi DITOLAK.'))) return
     try {
       const { error } = await supabase.from('utilitas').update({ status: 'DITOLAK' }).eq('id', row.id)
       if (error) throw error
@@ -285,7 +285,7 @@ export default function UtilitasClient({
   }
 
   async function handleDelete(row: UtilitasRow) {
-    if (!confirmAction('Hapus permohonan utilitas ini?')) return
+    if (!(await confirmActionAsync('Hapus permohonan utilitas ini?'))) return
     try {
       const { error } = await supabase.from('utilitas').delete().eq('id', row.id)
       if (error) throw error

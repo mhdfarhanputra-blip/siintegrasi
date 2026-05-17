@@ -8,7 +8,7 @@ import Modal from '@/components/Modal'
 import FileUpload from '@/components/FileUpload'
 import SearchInput from '@/components/SearchInput'
 import { useRealtime } from '@/lib/useRealtime'
-import { showError, showSuccess, confirmAction } from '@/lib/toast'
+import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
 interface BmnRow {
   id: string
@@ -50,7 +50,7 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
   useRealtime('bmn')
 
   async function handleImportFromPrevYear() {
-    if (!confirmAction(`Import data BMN dari TA ${tahunFilter - 1} ke TA ${tahunFilter}? Data akan diduplikasi dengan kondisi yang bisa diupdate.`)) return
+    if (!(await confirmActionAsync(`Import data BMN dari TA ${tahunFilter - 1} ke TA ${tahunFilter}? Data akan diduplikasi dengan kondisi yang bisa diupdate.`))) return
     setImportLoading(true)
     try {
       const { data: prevData, error: fetchErr } = await supabase
@@ -142,7 +142,7 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirmAction('Hapus data aset BMN ini?')) return
+    if (!(await confirmActionAsync('Hapus data aset BMN ini?'))) return
     try {
       const { error } = await supabase.from('bmn').delete().eq('id', id)
       if (error) throw error

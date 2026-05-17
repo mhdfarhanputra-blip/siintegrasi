@@ -7,7 +7,7 @@ import { Plus, FileText, Download, Trash2, Pencil } from 'lucide-react'
 import Modal from '@/components/Modal'
 import FileUpload from '@/components/FileUpload'
 import { useRealtime } from '@/lib/useRealtime'
-import { showError, showSuccess, confirmAction } from '@/lib/toast'
+import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 import { safeHttpUrl } from '@/lib/safeUrl'
 
 interface DipaRow {
@@ -96,7 +96,7 @@ export default function DipaClient({
   }
 
   async function handleDelete(id: string) {
-    if (!confirmAction('Hapus dokumen DIPA ini?')) return
+    if (!(await confirmActionAsync('Hapus dokumen DIPA ini?'))) return
     try {
       const { error } = await supabase.from('dokumen_dipa').delete().eq('id', id)
       if (error) throw error

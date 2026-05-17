@@ -8,7 +8,7 @@ import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
 import Pagination from '@/components/Pagination'
 import { useRealtime } from '@/lib/useRealtime'
-import { showError, showSuccess, confirmAction } from '@/lib/toast'
+import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
 interface Keuangan {
   id: string
@@ -94,7 +94,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
   const saldo = totalDebit - totalKredit
 
   const handleDelete = async (id: string) => {
-    if (!confirmAction('Yakin ingin menghapus transaksi ini?')) return
+    if (!(await confirmActionAsync('Yakin ingin menghapus transaksi ini?'))) return
     try {
       const { error } = await supabase.from('keuangan').delete().eq('id', id)
       if (error) throw error
@@ -260,7 +260,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
               defaultValue={editing?.kategori ?? ''}
               className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
             >
-              <option value="">— Tanpa kategori —</option>
+              <option value=""> Tanpa kategori </option>
               {kategoriList.map((k) => (
                 <option key={k.id} value={k.nama}>
                   {k.nama}

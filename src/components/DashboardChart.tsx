@@ -1,6 +1,6 @@
 'use client'
 
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface DashboardChartProps {
   pagu: number
@@ -9,6 +9,22 @@ interface DashboardChartProps {
 }
 
 const COLORS_DONUT = ['#0f766e', '#e5ebf5']
+
+const formatRp = (n: number) => {
+  if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(2)} M`
+  if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)} Jt`
+  return `Rp ${n.toLocaleString('id-ID')}`
+}
+
+function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-white px-3 py-2 rounded-lg shadow-lg border border-[var(--color-surface-200)] text-[11.5px]">
+      <p className="font-semibold text-[var(--color-navy-900)]">{payload[0].name}</p>
+      <p className="text-[var(--color-ink-500)]">{formatRp(payload[0].value)}</p>
+    </div>
+  )
+}
 
 export function PaguRealisasiDonut({ pagu, realisasi, sisa }: DashboardChartProps) {
   const persen = pagu > 0 ? Math.round((realisasi / pagu) * 100) : 0
@@ -19,7 +35,7 @@ export function PaguRealisasiDonut({ pagu, realisasi, sisa }: DashboardChartProp
 
   return (
     <div className="flex items-center gap-4">
-      <div className="w-24 h-24 relative">
+      <div className="w-24 h-24 relative" role="img" aria-label={`Realisasi anggaran ${persen} persen`}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -37,6 +53,7 @@ export function PaguRealisasiDonut({ pagu, realisasi, sisa }: DashboardChartProp
                 <Cell key={idx} fill={COLORS_DONUT[idx]} />
               ))}
             </Pie>
+            <Tooltip content={<CustomTooltip />} />
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex items-center justify-center">
@@ -45,11 +62,11 @@ export function PaguRealisasiDonut({ pagu, realisasi, sisa }: DashboardChartProp
       </div>
       <div className="space-y-1.5 text-[11.5px]">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#0f766e]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0f766e]" aria-hidden="true" />
           <span className="text-[var(--color-ink-500)]">Realisasi</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#e5ebf5]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#e5ebf5]" aria-hidden="true" />
           <span className="text-[var(--color-ink-500)]">Sisa Anggaran</span>
         </div>
       </div>
