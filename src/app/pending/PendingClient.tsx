@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getRoleLabel } from '@/lib/access'
 import { Clock, LogOut, RefreshCw, ShieldAlert, Mail, UserCog } from 'lucide-react'
 import { showError } from '@/lib/toast'
 
@@ -74,7 +75,7 @@ export default function PendingClient({ nama, email, status, role, createdAt }: 
           <div className="px-8 pb-6 space-y-2">
             <InfoRow icon={<UserCog size={14} />} label="Nama" value={nama} />
             <InfoRow icon={<Mail size={14} />} label="Email" value={email} />
-            <InfoRow icon={<ShieldAlert size={14} />} label="Role saat ini" value={role} />
+            <InfoRow icon={<ShieldAlert size={14} />} label="Role saat ini" value={getRoleLabel(role)} />
             <InfoRow icon={<Clock size={14} />} label="Didaftarkan" value={formatDateTime(createdAt)} />
           </div>
 
