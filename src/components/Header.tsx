@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
-import { LogOut, ChevronDown, UserCircle2 } from 'lucide-react'
+import { LogOut, ChevronDown, UserCircle2, Search } from 'lucide-react'
 import NotificationBell from '@/components/NotificationBell'
 import { getRoleLabel } from '@/lib/access'
 
@@ -74,6 +74,16 @@ export default function Header({ userName, userRole }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1 md:gap-2">
+        <button
+          onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+          className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[var(--color-surface-200)] text-[var(--color-ink-500)] hover:bg-[var(--color-surface-100)] transition text-[11px]"
+          aria-label="Buka pencarian cepat"
+          title="Pencarian cepat (Ctrl+K)"
+        >
+          <Search size={13} />
+          <span>Cari...</span>
+          <kbd className="font-mono bg-[var(--color-surface-100)] px-1 py-0.5 rounded text-[9px] border border-[var(--color-surface-200)]">Ctrl K</kbd>
+        </button>
         <NotificationBell />
 
         <div className="relative" ref={dropdownRef}>

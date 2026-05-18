@@ -1,64 +1,23 @@
-import Link from 'next/link'
-import type { LucideIcon } from 'lucide-react'
+import { LucideIcon } from 'lucide-react'
 
 interface EmptyStateProps {
   icon: LucideIcon
   title: string
   description?: string
-  actionLabel?: string
-  actionHref?: string
-  onAction?: () => void
-  tone?: 'neutral' | 'info' | 'warning'
+  action?: React.ReactNode
 }
 
-const TONE_CLASS: Record<NonNullable<EmptyStateProps['tone']>, string> = {
-  neutral: 'bg-[var(--color-surface-100)] text-[var(--color-ink-500)]',
-  info: 'bg-blue-50 text-blue-600',
-  warning: 'bg-amber-50 text-amber-600',
-}
-
-/**
- * Empty state generic dengan ilustrasi ikon, deskripsi, dan CTA opsional.
- * Pakai untuk setiap modul agar pesan kosong lebih informatif & branded.
- */
-export default function EmptyState({
-  icon: Icon,
-  title,
-  description,
-  actionLabel,
-  actionHref,
-  onAction,
-  tone = 'neutral',
-}: EmptyStateProps) {
+export default function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="card-base p-10 md:p-12 text-center flex flex-col items-center justify-center min-h-[260px]">
-      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${TONE_CLASS[tone]}`}>
-        <Icon size={28} />
+    <div className="card-base p-10 text-center">
+      <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[var(--color-gold-500)]/10 to-[var(--color-navy-900)]/5 flex items-center justify-center mb-4">
+        <Icon size={26} className="text-[var(--color-gold-600)]" aria-hidden="true" />
       </div>
       <h3 className="text-[15px] font-semibold text-[var(--color-navy-900)] font-display">{title}</h3>
       {description && (
-        <p className="text-[12.5px] text-[var(--color-ink-500)] mt-2 max-w-md">{description}</p>
+        <p className="text-[12.5px] text-[var(--color-ink-500)] mt-1.5 max-w-sm mx-auto">{description}</p>
       )}
-      {actionLabel && (actionHref || onAction) && (
-        <div className="mt-5">
-          {actionHref ? (
-            <Link
-              href={actionHref}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-navy-900)] text-white rounded-xl text-sm font-medium hover:bg-[var(--color-navy-800)] transition"
-            >
-              {actionLabel}
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={onAction}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-navy-900)] text-white rounded-xl text-sm font-medium hover:bg-[var(--color-navy-800)] transition"
-            >
-              {actionLabel}
-            </button>
-          )}
-        </div>
-      )}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   )
 }

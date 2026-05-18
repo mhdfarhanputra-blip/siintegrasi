@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 const DEFAULT_SYSTEM_PROMPT =
@@ -42,6 +43,10 @@ export async function POST(request: Request) {
     const user = await requireActiveUser()
     if (!user) {
       return NextResponse.json({ error: 'Akses ditolak' }, { status: 401 })
+    }
+
+    if (!checkRateLimit(`ai:${user.id}`, 10, 60_000)) {
+      return NextResponse.json({ error: 'Terlalu banyak permintaan, coba lagi sebentar' }, { status: 429 })
     }
 
     const { prompt, context } = await request.json()
