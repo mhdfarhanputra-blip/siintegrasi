@@ -380,7 +380,7 @@ function KronologiTab({ data }: { data: DipaRow[] }) {
               {idx < data.length - 1 && <span className="absolute left-[5px] top-4 bottom-[-12px] w-0.5 bg-[var(--color-surface-200)]" />}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13px] font-semibold text-[var(--color-navy-900)]">Revisi {row.revisi_ke}</span>
-                <span className="text-[11.5px] text-[var(--color-ink-500)]">{formatDate(row.created_at)}</span>
+                <span className="text-[11.5px] text-[var(--color-ink-500)]">{formatDate(row.tanggal_revisi || row.created_at)}</span>
                 {interval != null && <span className="text-[10.5px] text-[var(--color-gold-600)] bg-[var(--color-gold-500)]/10 px-1.5 py-0.5 rounded-md">+{interval} hari</span>}
               </div>
               <p className="text-[12px] text-[var(--color-ink-700)] mt-1">{row.keterangan_revisi || 'Tidak ada keterangan.'}</p>
