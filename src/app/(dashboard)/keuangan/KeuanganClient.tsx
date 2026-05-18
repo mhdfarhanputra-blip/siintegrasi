@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Wallet, Plus, Trash2, Download, Pencil, Receipt } from 'lucide-react'
@@ -8,6 +8,7 @@ import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
 import Pagination from '@/components/Pagination'
 import FileUpload from '@/components/FileUpload'
+import Combobox, { type ComboboxOption } from '@/components/Combobox'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
@@ -64,10 +65,54 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
   const [loading, setLoading] = useState(false)
   const [linkNota, setLinkNota] = useState<string | null>(null)
   const [currentJenis, setCurrentJenis] = useState<'Debit' | 'Kredit'>('Debit')
+  const [masterKategori, setMasterKategori] = useState<KategoriItem[]>(kategoriList)
+  const [kategoriField, setKategoriField] = useState('')
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
   useRealtime('keuangan')
+
+  // Opsi kategori: master + kategori yang sudah pernah dipakai pada transaksi
+  const kategoriOptions = useMemo<ComboboxOption[]>(() => {
+    const map = new Map<string, ComboboxOption>()
+    masterKategori
+      .filter((k) => k.aktif)
+      .filter((k) => !k.jenis_default || k.jenis_default === 'Keduanya' || k.jenis_default === currentJenis)
+      .forEach((k) => {
+        map.set(k.nama.toLowerCase(), {
+          value: k.nama,
+          label: k.nama,
+          meta: { jenis: k.jenis_default },
+        })
+      })
+    data.forEach((d) => {
+      if (!d.kategori) return
+      const key = d.kategori.toLowerCase()
+      if (!map.has(key)) {
+        map.set(key, { value: d.kategori, label: d.kategori })
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label))
+  }, [masterKategori, data, currentJenis])
+
+  async function createKategori(nama: string): Promise<ComboboxOption | null> {
+    try {
+      const { data: created, error } = await supabase
+        .from('kategori_keuangan')
+        .insert({ nama, jenis_default: currentJenis, urutan: 999, aktif: true })
+        .select('id, nama, jenis_default, aktif')
+        .single()
+      if (error) throw error
+      if (!created) return null
+      setMasterKategori((prev) => [...prev, created])
+      showSuccess(`Kategori "${nama}" ditambahkan`)
+      return { value: created.nama, label: created.nama, meta: { jenis: created.jenis_default } }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
+      showError('Gagal menambah kategori', msg)
+      return null
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -113,6 +158,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
     setEditing(null)
     setLinkNota(null)
     setCurrentJenis('Debit')
+    setKategoriField('')
     setShowModal(true)
   }
 
@@ -120,6 +166,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
     setEditing(item)
     setLinkNota(item.link_nota)
     setCurrentJenis(item.jenis_transaksi)
+    setKategoriField(item.kategori ?? '')
     setShowModal(true)
   }
 
@@ -131,7 +178,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
     const payload = {
       tanggal: form.get('tanggal') as string,
       jenis_transaksi: form.get('jenis_transaksi') as string,
-      kategori: (form.get('kategori') as string) || null,
+      kategori: kategoriField.trim() || null,
       nominal: Number(form.get('nominal')),
       keterangan: (form.get('keterangan') as string) || null,
       link_nota: linkNota,
@@ -257,25 +304,16 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
             </select>
           </div>
           <div>
-            <label
-              htmlFor={editing ? 'edit-kategori' : 'add-kategori'}
-              className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
-            >
-              Kategori
-            </label>
-            <select
+            <Combobox
               id={editing ? 'edit-kategori' : 'add-kategori'}
-              name="kategori"
-              defaultValue={editing?.kategori ?? ''}
-              className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
-            >
-              <option value=""> Tanpa kategori </option>
-              {kategoriList.map((k) => (
-                <option key={k.id} value={k.nama}>
-                  {k.nama}
-                </option>
-              ))}
-            </select>
+              label="Kategori"
+              value={kategoriField}
+              onChange={(val) => setKategoriField(val)}
+              options={kategoriOptions}
+              onCreate={createKategori}
+              placeholder="Cari atau ketik kategori..."
+              emptyText="Tidak ada kategori"
+            />
           </div>
           <div>
             <label
