@@ -7,8 +7,8 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   Admin: 'Admin',
   Bendahara: 'Bendahara',
   BMN: 'BMN',
-  Teknis: 'Tim Teknis Satker',
-  Perencanaan: 'Tim Teknis Perencanaan',
+  Teknis: 'Operator Satker',
+  Perencanaan: 'Operator Perencanaan',
   Pengusul: 'Pengusul',
 }
 

@@ -195,7 +195,7 @@ export default function UtilitasClient({
   }
 
   async function handleReviewOK(row: UtilitasRow, op: Operator) {
-    if (!(await confirmActionAsync(`Tandai review ${op === 'satker' ? 'Tim Teknis Satker' : 'Tim Teknis Perencanaan'} sebagai OK?`))) return
+    if (!(await confirmActionAsync(`Tandai review ${op === 'satker' ? 'Operator Satker' : 'Operator Perencanaan'} sebagai OK?`))) return
     const patch =
       op === 'satker'
         ? {
@@ -567,7 +567,7 @@ function UtilitasCard({
       {['PEMERIKSAAN', 'REVISI', 'DITERIMA', 'DITOLAK'].includes(row.status) && (
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <ReviewPanel
-            title="Operator 1 · Tim Teknis Satker"
+            title="Operator Satker"
             subtitle="Cek kelengkapan administratif"
             reviewStatus={row.review_satker}
             catatan={row.review_satker_catatan}
@@ -583,7 +583,7 @@ function UtilitasCard({
             }}
           />
           <ReviewPanel
-            title="Operator 2 · Tim Teknis Perencanaan"
+            title="Operator Perencanaan"
             subtitle="Cek desain dan kesesuaian teknis"
             reviewStatus={row.review_perencanaan}
             catatan={row.review_perencanaan_catatan}
@@ -841,7 +841,7 @@ function NoteModal({
   onSubmit: (catatan: string) => void
 }) {
   const [catatan, setCatatan] = useState('')
-  const label = target?.op === 'satker' ? 'Tim Teknis Satker' : 'Tim Teknis Perencanaan'
+  const label = target?.op === 'satker' ? 'Operator Satker' : 'Operator Perencanaan'
 
   function handle(e: React.FormEvent) {
     e.preventDefault()
