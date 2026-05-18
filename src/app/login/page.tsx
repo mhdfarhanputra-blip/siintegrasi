@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { ShieldCheck, Sparkles, BarChart3, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { showError } from '@/lib/toast'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -68,8 +69,15 @@ export default function LoginPage() {
           }}
         />
         <div className="relative flex items-center gap-3">
-          <div className="w-11 h-11 bg-gradient-to-br from-[var(--color-gold-500)] to-[var(--color-gold-700)] rounded-xl flex items-center justify-center shadow-lg">
-            <span className="text-white font-extrabold text-sm tracking-wider font-display">SI</span>
+          <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg p-1.5 ring-1 ring-white/20">
+            <Image
+              src="/logo.png"
+              alt="Logo SI Terintegrasi"
+              width={36}
+              height={36}
+              className="w-full h-full object-contain"
+              priority
+            />
           </div>
           <div>
             <p className="text-white font-semibold text-sm tracking-tight font-display">SI Terintegrasi</p>
@@ -103,8 +111,14 @@ export default function LoginPage() {
       <div className="flex items-center justify-center p-6 sm:p-10 bg-[var(--color-surface-50)]">
         <div className="w-full max-w-md">
           <div className="lg:hidden mb-8 flex items-center gap-3">
-            <div className="w-11 h-11 bg-gradient-to-br from-[var(--color-gold-500)] to-[var(--color-gold-700)] rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-extrabold text-sm tracking-wider font-display">SI</span>
+            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-md p-1.5 ring-1 ring-[var(--color-surface-200)]">
+              <Image
+                src="/logo.png"
+                alt="Logo SI Terintegrasi"
+                width={36}
+                height={36}
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <p className="font-semibold text-sm text-[var(--color-navy-900)] font-display">SI Terintegrasi</p>

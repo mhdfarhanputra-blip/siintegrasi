@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
@@ -157,8 +158,8 @@ export default function Sidebar({ userRole }: SidebarProps) {
       >
         <div className="relative px-5 py-5 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-gradient-to-br from-[var(--color-gold-500)] to-[var(--color-gold-700)] rounded-xl flex items-center justify-center shadow-lg shadow-black/20">
-              <span className="text-white font-extrabold text-xs tracking-wider font-display">SI</span>
+            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-black/20 p-1.5">
+              <Image src="/logo.png" alt="Logo SI Terintegrasi" width={36} height={36} className="object-contain" priority />
             </div>
             <div>
               <h2 className="text-white font-semibold text-sm tracking-tight font-display">SI Terintegrasi</h2>

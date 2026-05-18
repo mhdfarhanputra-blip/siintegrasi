@@ -26,7 +26,16 @@ export const metadata: Metadata = {
     'Sistem Informasi Terintegrasi — manajemen keuangan, aset, utilitas, dan perencanaan anggaran.',
   manifest: '/manifest.json',
   applicationName: 'SI Terintegrasi',
-  icons: { icon: '/favicon.ico' },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logo-64.png', type: 'image/png', sizes: '64x64' },
+      { url: '/logo-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/logo-512.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: ['/favicon.ico'],
+  },
 }
 
 export const viewport: Viewport = {

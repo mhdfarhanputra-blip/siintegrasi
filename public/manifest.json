@@ -1,7 +1,7 @@
 {
-  "name": "SI Terintegrasi P2JN Babel",
-  "short_name": "P2JN",
-  "description": "Sistem Informasi Terintegrasi Satker P2JN Bangka Belitung",
+  "name": "SI Terintegrasi",
+  "short_name": "SI Terintegrasi",
+  "description": "Sistem Informasi Terintegrasi untuk manajemen keuangan, aset, utilitas, dan perencanaan anggaran.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,9 +9,12 @@
   "background_color": "#0c1e3e",
   "theme_color": "#0c1e3e",
   "lang": "id-ID",
-  "categories": ["business", "government", "productivity"],
+  "categories": ["business", "productivity"],
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/logo-64.png", "sizes": "64x64", "type": "image/png", "purpose": "any" },
+    { "src": "/logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
     { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
   ],
   "shortcuts": [
