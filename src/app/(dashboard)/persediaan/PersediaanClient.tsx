@@ -7,6 +7,7 @@ import { Plus, Trash2, Pencil, Download, FileImage } from 'lucide-react'
 import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
 import FileUpload from '@/components/FileUpload'
+import Combobox, { type ComboboxOption } from '@/components/Combobox'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
@@ -26,10 +27,23 @@ interface PersediaanRow {
   created_at: string
 }
 
+interface MasterBarang {
+  id: string
+  nama: string
+  satuan: string | null
+  kategori: string | null
+}
+
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 
-export default function PersediaanClient({ initialData }: { initialData: PersediaanRow[] }) {
+export default function PersediaanClient({
+  initialData,
+  masterBarang = [],
+}: {
+  initialData: PersediaanRow[]
+  masterBarang?: MasterBarang[]
+}) {
   const [data, setData] = useState(initialData)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<PersediaanRow | null>(null)
@@ -37,10 +51,57 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
   const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [loading, setLoading] = useState(false)
   const [linkDokumentasi, setLinkDokumentasi] = useState<string | null>(null)
+  const [namaBarang, setNamaBarang] = useState('')
+  const [satuanField, setSatuanField] = useState('')
+  const [masterList, setMasterList] = useState<MasterBarang[]>(masterBarang)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
   useRealtime('persediaan')
+
+  // Bangun opsi combobox dari master barang + nama barang yang sudah pernah dipakai
+  const barangOptions = useMemo<ComboboxOption[]>(() => {
+    const map = new Map<string, ComboboxOption>()
+    masterList.forEach((m) => {
+      map.set(m.nama.toLowerCase(), {
+        value: m.nama,
+        label: m.nama,
+        meta: { satuan: m.satuan },
+      })
+    })
+    data.forEach((d) => {
+      const key = d.nama_barang.toLowerCase()
+      if (!map.has(key)) {
+        map.set(key, {
+          value: d.nama_barang,
+          label: d.nama_barang,
+          meta: { satuan: d.satuan },
+        })
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label))
+  }, [masterList, data])
+
+  async function createMasterBarang(nama: string): Promise<ComboboxOption | null> {
+    const defaultSatuan = satuanField || 'unit'
+    try {
+      const { data: created, error } = await supabase
+        .from('master_barang')
+        .insert({ nama, satuan: defaultSatuan })
+        .select('id, nama, satuan, kategori')
+        .single()
+      if (error) throw error
+      if (!created) return null
+      setMasterList((prev) => [...prev, created])
+      setSatuanField(created.satuan)
+      showSuccess(`Barang "${nama}" ditambahkan ke master`)
+      return { value: created.nama, label: created.nama, meta: { satuan: created.satuan } }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
+      showError('Gagal menambah master barang', msg)
+      return null
+    }
+  }
 
   const filtered = data.filter((d) => {
     if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
@@ -69,12 +130,16 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
   const openAdd = () => {
     setEditing(null)
     setLinkDokumentasi(null)
+    setNamaBarang('')
+    setSatuanField('')
     setShowForm(true)
   }
 
   const openEdit = (row: PersediaanRow) => {
     setEditing(row)
     setLinkDokumentasi(row.link_dokumentasi)
+    setNamaBarang(row.nama_barang)
+    setSatuanField(row.satuan)
     setShowForm(true)
   }
 
@@ -84,7 +149,6 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
     const form = new FormData(e.currentTarget)
     const jenis = form.get('jenis') as string
     const jumlah = Number(form.get('jumlah'))
-    const namaBarang = (form.get('nama_barang') as string).trim()
     const itemKey = namaBarang.toLowerCase()
 
     try {
@@ -95,7 +159,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
           nama_barang: namaBarang,
           supplier_tujuan: (form.get('supplier_tujuan') as string) || null,
           jumlah,
-          satuan: form.get('satuan') as string,
+          satuan: satuanField || 'unit',
           stok_minimum: Number(form.get('stok_minimum') ?? 0) || 0,
           link_dokumentasi: linkDokumentasi,
         }
@@ -115,7 +179,7 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
           nama_barang: namaBarang,
           supplier_tujuan: (form.get('supplier_tujuan') as string) || null,
           jumlah,
-          satuan: form.get('satuan') as string,
+          satuan: satuanField || 'unit',
           stok_saldo: newSaldo,
           stok_minimum: Number(form.get('stok_minimum') ?? 0) || 0,
           tahun_anggaran: tahunFilter,
@@ -315,21 +379,20 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
             </select>
           </div>
           <div>
-            <label
-              htmlFor={editing ? 'edit-nama-barang' : 'add-nama-barang'}
-              className="block text-sm font-medium text-[var(--color-ink-700)] mb-1"
-            >
-              Nama Barang <span className="text-rose-600" aria-label="wajib diisi">*</span>
-            </label>
-            <input
+            <Combobox
               id={editing ? 'edit-nama-barang' : 'add-nama-barang'}
-              type="text"
-              name="nama_barang"
-              defaultValue={editing?.nama_barang}
+              label="Nama Barang"
               required
-              aria-required="true"
-              placeholder="Nama barang"
-              className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
+              value={namaBarang}
+              onChange={(val, meta) => {
+                setNamaBarang(val)
+                if (meta?.satuan && typeof meta.satuan === 'string') {
+                  setSatuanField(meta.satuan)
+                }
+              }}
+              options={barangOptions}
+              onCreate={createMasterBarang}
+              placeholder="Cari atau ketik nama barang..."
             />
           </div>
           <div>
@@ -378,13 +441,14 @@ export default function PersediaanClient({ initialData }: { initialData: Persedi
               <input
                 id={editing ? 'edit-satuan' : 'add-satuan'}
                 type="text"
-                name="satuan"
-                defaultValue={editing?.satuan}
+                value={satuanField}
+                onChange={(e) => setSatuanField(e.target.value)}
                 required
                 aria-required="true"
                 placeholder="pcs, rim, box"
                 className="w-full border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-gold-500)] focus:border-transparent outline-none"
               />
+              <p className="text-[10.5px] text-[var(--color-ink-400)] mt-1">Auto-isi dari master barang.</p>
             </div>
           </div>
           <div>

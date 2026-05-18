@@ -9,11 +9,13 @@ export default async function PersediaanPage() {
   if (!canAccessModule(me?.role, 'persediaan')) redirect('/')
 
   const supabase = await createServerSupabase()
-  const { data } = await supabase
-    .from('persediaan')
-    .select('*')
-    .order('tanggal', { ascending: false })
+  const [persediaanRes, masterRes] = await Promise.all([
+    supabase.from('persediaan').select('*').order('tanggal', { ascending: false }),
+    supabase.from('master_barang').select('id, nama, satuan, kategori').eq('aktif', true).order('nama'),
+  ])
 
-  const key = `${data?.length ?? 0}:${data?.[0]?.id ?? 'empty'}:${data?.[0]?.created_at ?? ''}`
-  return <PersediaanClient key={key} initialData={data || []} />
+  const data = persediaanRes.data ?? []
+  const master = masterRes.data ?? []
+  const key = `${data.length}:${data[0]?.id ?? 'empty'}:${data[0]?.created_at ?? ''}`
+  return <PersediaanClient key={key} initialData={data} masterBarang={master} />
 }
