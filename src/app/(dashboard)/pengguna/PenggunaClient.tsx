@@ -7,6 +7,7 @@ import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
+import { getRoleLabel } from '@/lib/access'
 
 interface ProfileRow {
   id: string

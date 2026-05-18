@@ -2,6 +2,20 @@ export const ROLES = ['Admin', 'Bendahara', 'BMN', 'Teknis', 'Perencanaan', 'Pen
 
 export type AppRole = (typeof ROLES)[number]
 
+/** Label tampilan untuk setiap role (value DB tetap sama) */
+export const ROLE_LABELS: Record<AppRole, string> = {
+  Admin: 'Admin',
+  Bendahara: 'Bendahara',
+  BMN: 'BMN',
+  Teknis: 'Tim Teknis Satker',
+  Perencanaan: 'Tim Teknis Perencanaan',
+  Pengusul: 'Pengusul',
+}
+
+export function getRoleLabel(role: string): string {
+  return ROLE_LABELS[role as AppRole] ?? role
+}
+
 export const MODULE_ROLES = {
   dashboard: ['Admin', 'Bendahara', 'BMN', 'Teknis', 'Perencanaan', 'Pengusul'],
   keuangan: ['Admin', 'Bendahara'],

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, ChevronDown, UserCircle2 } from 'lucide-react'
 import NotificationBell from '@/components/NotificationBell'
+import { getRoleLabel } from '@/lib/access'
 
 interface HeaderProps {
   userName: string
@@ -87,7 +88,7 @@ export default function Header({ userName, userRole }: HeaderProps) {
             </div>
             <div className="hidden md:block text-left leading-tight">
               <p className="text-[12.5px] font-semibold text-[var(--color-navy-900)]">{userName}</p>
-              <p className="text-[10.5px] text-[var(--color-ink-500)]">{userRole}</p>
+              <p className="text-[10.5px] text-[var(--color-ink-500)]">{getRoleLabel(userRole)}</p>
             </div>
             <ChevronDown
               size={14}
@@ -109,7 +110,7 @@ export default function Header({ userName, userRole }: HeaderProps) {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-[var(--color-navy-900)] truncate">{userName}</p>
-                    <p className="text-[11px] text-[var(--color-ink-500)]">Role {userRole}</p>
+                    <p className="text-[11px] text-[var(--color-ink-500)]">Role {getRoleLabel(userRole)}</p>
                   </div>
                 </div>
               </div>

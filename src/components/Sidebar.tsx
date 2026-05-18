@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { getRoleLabel } from '@/lib/access'
 import {
   LayoutDashboard,
   Wallet,
@@ -225,7 +226,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
             <ShieldCheck size={14} className="text-[var(--color-gold-400)]" />
             <div className="flex-1">
               <p className="text-[10px] uppercase tracking-wider text-white/40">Role</p>
-              <p className="text-xs text-white font-medium">{userRole}</p>
+              <p className="text-xs text-white font-medium">{getRoleLabel(userRole)}</p>
             </div>
           </div>
         </div>
