@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { User, Mail, Shield, Lock, Eye, EyeOff } from 'lucide-react'
 import { showError, showSuccess } from '@/lib/toast'
 import type { CurrentUser } from '@/lib/getCurrentUser'
+import { getRoleLabel } from '@/lib/access'
 
 export default function ProfilClient({ user }: { user: CurrentUser }) {
   const supabase = useMemo(() => createClient(), [])
@@ -90,7 +91,7 @@ export default function ProfilClient({ user }: { user: CurrentUser }) {
             <p className="text-sm text-[var(--color-ink-500)]">{user.email}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--color-gold-500)]/10 text-[var(--color-gold-700)]">
-                <Shield size={11} /> {user.role}
+                <Shield size={11} /> {getRoleLabel(user.role)}
               </span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700">
                 {user.status}

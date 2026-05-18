@@ -100,7 +100,7 @@ export default function PenggunaClient({ initialData, currentUserId }: PenggunaC
   }
 
   async function handleApprove(row: ProfileRow) {
-    if (!(await confirmActionAsync(`Setujui akun ${row.nama}? Role saat ini: ${row.role}.`))) return
+    if (!(await confirmActionAsync(`Setujui akun ${row.nama}? Role saat ini: ${getRoleLabel(row.role)}.`))) return
     await updateProfile(row.id, { status: 'Aktif' }, 'Akun berhasil disetujui')
   }
 
@@ -254,7 +254,7 @@ export default function PenggunaClient({ initialData, currentUserId }: PenggunaC
                         ROLE_COLOR[row.role] || 'bg-slate-100 text-slate-700'
                       }`}
                     >
-                      {row.role}
+                      {getRoleLabel(row.role)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -367,7 +367,7 @@ export default function PenggunaClient({ initialData, currentUserId }: PenggunaC
               >
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {getRoleLabel(r)}
                   </option>
                 ))}
               </select>
