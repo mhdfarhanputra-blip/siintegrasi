@@ -502,126 +502,103 @@ function WorkflowLegend({ isPengusul }: { isPengusul: boolean }) {
 }
 
 function DetailedTimeline({ row, transmital }: { row: UtilitasRow; transmital: TransmitalRow[] }) {
-  const DOT_TONE: Record<string, string> = {
-    DIAJUKAN: 'bg-sky-500',
-    PEMERIKSAAN: 'bg-amber-500',
-    REVISI: 'bg-orange-500',
-    DITERIMA: 'bg-emerald-500',
-    DITOLAK: 'bg-rose-500',
-  }
+  // Ringkasan saja — detail lengkap ada di modal Kronologis
+  const pemeriksaanStart = transmital.find((t) => t.tahapan === 'PEMERIKSAAN')?.waktu_masuk
+  const SLA_HARI = 2
+  const elapsedMs = pemeriksaanStart ? Date.now() - new Date(pemeriksaanStart).getTime() : 0
+  const elapsedHari = Math.floor(elapsedMs / (1000 * 60 * 60 * 24))
+  const slaExpired = row.status === 'PEMERIKSAAN' && elapsedHari >= SLA_HARI
 
-  // Bangun timeline kronologis: transmital records + review terkini
   return (
-    <div className="mt-4 space-y-0">
-      {/* 1. Usulan diajukan (selalu ada) */}
-      <TimelineNode
-        dotColor="bg-sky-500"
-        title="Usulan Diajukan"
-        date={row.tgl_usul}
-        detail={`${row.instansi || 'Tanpa instansi'} · ${row.lokasi || 'Tanpa lokasi'}`}
-        hasLine
-      />
+    <div className="mt-4 space-y-3">
+      {/* Status saat ini */}
+      <div className="flex items-center gap-2">
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11.5px] font-semibold ${STATUS_STYLE[row.status]?.tone ?? 'bg-slate-100 text-slate-600'}`}>
+          <span className={`w-2 h-2 rounded-full ${STATUS_STYLE[row.status]?.dot ?? 'bg-slate-400'}`} />
+          {STATUS_STYLE[row.status]?.label ?? row.status}
+        </span>
+        {row.revisi_ke > 0 && (
+          <span className="text-[10.5px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+            Rev ke-{row.revisi_ke}
+          </span>
+        )}
+      </div>
 
-      {/* 2. Semua transmital records (kronologis lengkap) */}
-      {transmital.map((t, idx) => {
-        const isLast = idx === transmital.length - 1 && row.status !== 'PEMERIKSAAN'
-        return (
-          <TimelineNode
-            key={t.id}
-            dotColor={DOT_TONE[t.tahapan] ?? 'bg-slate-400'}
-            title={STATUS_STYLE[t.tahapan]?.label ?? t.tahapan}
-            date={t.waktu_masuk}
-            detail={[
-              t.profiles?.nama ? `PIC: ${t.profiles.nama}` : null,
-              t.durasi_hari != null ? `${t.durasi_hari} hari` : null,
-            ].filter(Boolean).join(' · ') || undefined}
-            catatan={t.catatan}
-            hasLine={!isLast || row.status === 'PEMERIKSAAN'}
-          />
-        )
-      })}
-
-      {/* 3. Status pemeriksaan terkini (review paralel) + SLA */}
-      {row.status === 'PEMERIKSAAN' && (() => {
-        const pemeriksaanStart = transmital.find((t) => t.tahapan === 'PEMERIKSAAN')?.waktu_masuk
-        const SLA_HARI = 2
-        const elapsedMs = pemeriksaanStart ? Date.now() - new Date(pemeriksaanStart).getTime() : 0
-        const elapsedHari = Math.floor(elapsedMs / (1000 * 60 * 60 * 24))
-        const slaExpired = elapsedHari >= SLA_HARI
-        return (
-          <>
-            {slaExpired && (
-              <div className="relative pl-6 pb-4">
-                <div className="absolute left-0 top-1.5 w-3 h-3 rounded-full bg-rose-500 ring-4 ring-rose-500/15 animate-pulse" />
-                <div className="absolute left-[5px] top-4 bottom-0 w-0.5 bg-[var(--color-surface-200)]" />
-                <p className="text-[12.5px] font-semibold text-rose-700">SLA Terlampaui ({elapsedHari} hari)</p>
-                <p className="text-[11px] text-rose-600">Batas pemeriksaan {SLA_HARI} hari kerja telah terlewati</p>
-              </div>
-            )}
-            <TimelineNode
-              dotColor={row.review_satker === 'OK' ? 'bg-emerald-500' : row.review_satker === 'CATATAN' ? 'bg-orange-500' : 'bg-slate-300'}
-              title={`Review Satker: ${row.review_satker === 'OK' ? 'Disetujui' : row.review_satker === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}`}
-              date={row.review_satker_at}
-              catatan={row.review_satker_catatan}
-              inactive={row.review_satker === 'PENDING'}
-              hasLine
-            />
-            <TimelineNode
-              dotColor={row.review_perencanaan === 'OK' ? 'bg-emerald-500' : row.review_perencanaan === 'CATATAN' ? 'bg-orange-500' : 'bg-slate-300'}
-              title={`Review Perencanaan: ${row.review_perencanaan === 'OK' ? 'Disetujui' : row.review_perencanaan === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}`}
-              date={row.review_perencanaan_at}
-              catatan={row.review_perencanaan_catatan}
-              inactive={row.review_perencanaan === 'PENDING'}
-              hasLine={false}
-            />
-          </>
-        )
-      })()}
-
-      {/* 4. Status REVISI — menunggu perbaikan */}
-      {row.status === 'REVISI' && (
-        <>
-          <TimelineNode
-            dotColor={row.review_satker === 'OK' ? 'bg-emerald-500' : 'bg-orange-500'}
-            title={`Review Satker: ${row.review_satker === 'OK' ? 'Disetujui' : 'Ada Catatan'}`}
-            date={row.review_satker_at}
-            catatan={row.review_satker_catatan}
-            hasLine
-          />
-          <TimelineNode
-            dotColor={row.review_perencanaan === 'OK' ? 'bg-emerald-500' : 'bg-orange-500'}
-            title={`Review Perencanaan: ${row.review_perencanaan === 'OK' ? 'Disetujui' : 'Ada Catatan'}`}
-            date={row.review_perencanaan_at}
-            catatan={row.review_perencanaan_catatan}
-            hasLine
-          />
-          <TimelineNode
-            dotColor="bg-orange-500"
-            title={`Menunggu Perbaikan Revisi ke-${row.revisi_ke + 1}`}
-            detail="Pengusul perlu mengirim ulang setelah memperbaiki sesuai catatan"
-            hasLine={false}
-            inactive
-          />
-        </>
+      {/* SLA Warning */}
+      {slaExpired && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg">
+          <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          <p className="text-[11.5px] text-rose-700 font-medium">SLA terlampaui ({elapsedHari} hari)</p>
+        </div>
       )}
 
-      {/* 5. Status akhir */}
+      {/* Review status ringkas */}
+      {row.status !== 'DIAJUKAN' && (
+        <div className="space-y-2">
+          <p className="text-[10.5px] font-semibold text-[var(--color-ink-500)] uppercase">Review Operator</p>
+          <div className="grid grid-cols-1 gap-2">
+            <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${
+              row.review_satker === 'OK' ? 'border-emerald-200 bg-emerald-50' :
+              row.review_satker === 'CATATAN' ? 'border-orange-200 bg-orange-50' :
+              'border-[var(--color-surface-200)] bg-[var(--color-surface-50)]'
+            }`}>
+              <div>
+                <p className="text-[11.5px] font-semibold text-[var(--color-navy-900)]">Satker</p>
+                {row.review_satker_at && (
+                  <p className="text-[10px] text-[var(--color-ink-400)]">{formatDate(row.review_satker_at)}</p>
+                )}
+              </div>
+              <span className={`text-[11px] font-semibold ${
+                row.review_satker === 'OK' ? 'text-emerald-700' :
+                row.review_satker === 'CATATAN' ? 'text-orange-700' :
+                'text-slate-500'
+              }`}>
+                {row.review_satker === 'OK' ? 'Disetujui' : row.review_satker === 'CATATAN' ? 'Catatan' : 'Menunggu'}
+              </span>
+            </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${
+              row.review_perencanaan === 'OK' ? 'border-emerald-200 bg-emerald-50' :
+              row.review_perencanaan === 'CATATAN' ? 'border-orange-200 bg-orange-50' :
+              'border-[var(--color-surface-200)] bg-[var(--color-surface-50)]'
+            }`}>
+              <div>
+                <p className="text-[11.5px] font-semibold text-[var(--color-navy-900)]">Perencanaan</p>
+                {row.review_perencanaan_at && (
+                  <p className="text-[10px] text-[var(--color-ink-400)]">{formatDate(row.review_perencanaan_at)}</p>
+                )}
+              </div>
+              <span className={`text-[11px] font-semibold ${
+                row.review_perencanaan === 'OK' ? 'text-emerald-700' :
+                row.review_perencanaan === 'CATATAN' ? 'text-orange-700' :
+                'text-slate-500'
+              }`}>
+                {row.review_perencanaan === 'OK' ? 'Disetujui' : row.review_perencanaan === 'CATATAN' ? 'Catatan' : 'Menunggu'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info ringkas */}
+      {row.status === 'REVISI' && (
+        <p className="text-[11px] text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+          Menunggu perbaikan dari pengusul
+        </p>
+      )}
       {row.status === 'DITERIMA' && (
-        <TimelineNode
-          dotColor="bg-emerald-500"
-          title="Permohonan Diterima"
-          detail="Kedua operator telah menyetujui"
-          hasLine={false}
-        />
+        <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+          Permohonan telah diterima
+        </p>
       )}
       {row.status === 'DITOLAK' && (
-        <TimelineNode
-          dotColor="bg-rose-500"
-          title="Permohonan Ditolak"
-          detail="Ditolak secara final oleh Admin"
-          hasLine={false}
-        />
+        <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          Permohonan ditolak
+        </p>
       )}
+
+      <p className="text-[10px] text-[var(--color-ink-400)] italic">
+        Klik tombol &quot;Kronologis&quot; pada usulan untuk melihat riwayat lengkap.
+      </p>
     </div>
   )
 }
