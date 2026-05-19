@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const pdfParse = (await import('pdf-parse')).default
+    const pdfParse = (await import('pdf-parse-debugging-disabled')).default
     const pdfData = await pdfParse(buffer)
     const text = pdfData.text
 
