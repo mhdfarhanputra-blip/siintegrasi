@@ -393,79 +393,8 @@ export default function UtilitasClient({
           </h3>
           {!selected ? (
             <p className="mt-4 text-sm text-[var(--color-ink-400)]">Pilih permohonan untuk melihat timeline.</p>
-          ) : selectedTransmital.length === 0 ? (
-            <div className="mt-4 space-y-3">
-              <p className="text-sm text-[var(--color-ink-400)]">Belum ada tahapan transmital.</p>
-              {selected.status !== 'DIAJUKAN' && (
-                <div className="text-[12px] text-[var(--color-ink-500)] bg-[var(--color-surface-100)] rounded-lg p-3 space-y-1.5">
-                  <p className="font-semibold text-[var(--color-navy-900)]">Status: {STATUS_STYLE[selected.status]?.label ?? selected.status}</p>
-                  {selected.revisi_ke > 0 && <p>Revisi ke-{selected.revisi_ke}</p>}
-                  {selected.review_satker !== 'PENDING' && (
-                    <p>Satker: {selected.review_satker === 'OK' ? '✓ OK' : `Catatan — ${selected.review_satker_catatan ?? '-'}`}
-                      {selected.review_satker_at && ` (${formatDate(selected.review_satker_at)})`}
-                    </p>
-                  )}
-                  {selected.review_perencanaan !== 'PENDING' && (
-                    <p>Perencanaan: {selected.review_perencanaan === 'OK' ? '✓ OK' : `Catatan — ${selected.review_perencanaan_catatan ?? '-'}`}
-                      {selected.review_perencanaan_at && ` (${formatDate(selected.review_perencanaan_at)})`}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
           ) : (
-            <div className="mt-4 space-y-4">
-              {selected.revisi_ke > 0 && (
-                <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                  Revisi ke-{selected.revisi_ke}
-                </p>
-              )}
-              {selectedTransmital.map((t, idx) => (
-                <div key={t.id} className="relative pl-6">
-                  <div className="absolute left-0 top-1.5 w-3 h-3 rounded-full bg-[var(--color-gold-500)] ring-4 ring-[var(--color-gold-500)]/15" />
-                  {idx < selectedTransmital.length - 1 && (
-                    <div className="absolute left-[5px] top-4 bottom-[-16px] w-0.5 bg-[var(--color-surface-200)]" />
-                  )}
-                  <p className="text-[13px] font-semibold text-[var(--color-navy-900)]">
-                    {STATUS_STYLE[t.tahapan]?.label ?? t.tahapan}
-                  </p>
-                  <p className="text-[11.5px] text-[var(--color-ink-500)]">
-                    {formatDate(t.waktu_masuk)}
-                    {t.durasi_hari != null ? ` · ${t.durasi_hari} hari` : ''}
-                    {t.pic ? ` · PIC: ${t.pic}` : ''}
-                  </p>
-                  {t.catatan && (
-                    <p className="mt-1 text-[11.5px] text-[var(--color-ink-700)] bg-[var(--color-surface-100)] border border-[var(--color-surface-200)] rounded-lg px-2.5 py-1.5">
-                      {t.catatan}
-                    </p>
-                  )}
-                </div>
-              ))}
-              {/* Ringkasan review terkini */}
-              {selected.review_satker !== 'PENDING' && (
-                <div className="border-t border-[var(--color-surface-200)] pt-3 space-y-1.5">
-                  <p className="text-[11px] font-semibold text-[var(--color-ink-500)] uppercase">Review Terkini</p>
-                  <div className="text-[12px] space-y-1">
-                    <p>
-                      <span className="font-medium">Satker:</span>{' '}
-                      {selected.review_satker === 'OK' ? '✓ OK' : `Ada Catatan`}
-                      {selected.review_satker_at && ` — ${formatDate(selected.review_satker_at)}`}
-                    </p>
-                    {selected.review_satker === 'CATATAN' && selected.review_satker_catatan && (
-                      <p className="text-orange-700 bg-orange-50 rounded px-2 py-1 text-[11px]">{selected.review_satker_catatan}</p>
-                    )}
-                    <p>
-                      <span className="font-medium">Perencanaan:</span>{' '}
-                      {selected.review_perencanaan === 'OK' ? '✓ OK' : selected.review_perencanaan === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}
-                      {selected.review_perencanaan_at && ` — ${formatDate(selected.review_perencanaan_at)}`}
-                    </p>
-                    {selected.review_perencanaan === 'CATATAN' && selected.review_perencanaan_catatan && (
-                      <p className="text-orange-700 bg-orange-50 rounded px-2 py-1 text-[11px]">{selected.review_perencanaan_catatan}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <DetailedTimeline row={selected} transmital={selectedTransmital} />
           )}
         </div>
       </div>
@@ -519,6 +448,158 @@ function WorkflowLegend({ isPengusul }: { isPengusul: boolean }) {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function DetailedTimeline({ row, transmital }: { row: UtilitasRow; transmital: TransmitalRow[] }) {
+  interface TimelineEntry {
+    key: string
+    title: string
+    date: string | null
+    detail?: string
+    catatan?: string | null
+    tone: 'sky' | 'amber' | 'emerald' | 'orange' | 'rose' | 'slate'
+    active: boolean
+  }
+
+  const entries: TimelineEntry[] = []
+
+  // 1. Usulan masuk
+  entries.push({
+    key: 'usul',
+    title: 'Usulan Diajukan',
+    date: row.tgl_usul,
+    detail: `${row.instansi || 'Tanpa instansi'} · ${row.lokasi || 'Tanpa lokasi'}`,
+    tone: 'sky',
+    active: true,
+  })
+
+  // 2. Pemeriksaan dimulai
+  if (row.status !== 'DIAJUKAN') {
+    const pemeriksaanT = transmital.find((t) => t.tahapan === 'PEMERIKSAAN')
+    entries.push({
+      key: 'pemeriksaan',
+      title: 'Pemeriksaan Dimulai',
+      date: pemeriksaanT?.waktu_masuk ?? null,
+      detail: 'Review paralel oleh Operator Satker & Perencanaan',
+      tone: 'amber',
+      active: true,
+    })
+  }
+
+  // 3. Review Satker
+  if (row.review_satker !== 'PENDING') {
+    entries.push({
+      key: 'satker',
+      title: `Review Satker: ${row.review_satker === 'OK' ? 'Disetujui' : 'Ada Catatan'}`,
+      date: row.review_satker_at,
+      catatan: row.review_satker_catatan,
+      tone: row.review_satker === 'OK' ? 'emerald' : 'orange',
+      active: true,
+    })
+  } else if (row.status === 'PEMERIKSAAN') {
+    entries.push({
+      key: 'satker-pending',
+      title: 'Review Satker: Menunggu',
+      date: null,
+      detail: 'Belum ada tindakan dari Operator Satker',
+      tone: 'slate',
+      active: false,
+    })
+  }
+
+  // 4. Review Perencanaan
+  if (row.review_perencanaan !== 'PENDING') {
+    entries.push({
+      key: 'perencanaan',
+      title: `Review Perencanaan: ${row.review_perencanaan === 'OK' ? 'Disetujui' : 'Ada Catatan'}`,
+      date: row.review_perencanaan_at,
+      catatan: row.review_perencanaan_catatan,
+      tone: row.review_perencanaan === 'OK' ? 'emerald' : 'orange',
+      active: true,
+    })
+  } else if (row.status === 'PEMERIKSAAN') {
+    entries.push({
+      key: 'perencanaan-pending',
+      title: 'Review Perencanaan: Menunggu',
+      date: null,
+      detail: 'Belum ada tindakan dari Operator Perencanaan',
+      tone: 'slate',
+      active: false,
+    })
+  }
+
+  // 5. Revisi
+  if (row.status === 'REVISI' || row.revisi_ke > 0) {
+    const revisiT = transmital.filter((t) => t.tahapan === 'REVISI')
+    const latest = revisiT[revisiT.length - 1]
+    entries.push({
+      key: 'revisi',
+      title: `Revisi ke-${row.revisi_ke || 1}`,
+      date: latest?.waktu_masuk ?? null,
+      detail: row.status === 'REVISI' ? 'Menunggu perbaikan dari pengusul' : 'Pengusul telah mengirim ulang',
+      tone: 'orange',
+      active: true,
+    })
+  }
+
+  // 6. Status akhir
+  if (row.status === 'DITERIMA') {
+    const dt = transmital.find((t) => t.tahapan === 'DITERIMA')
+    entries.push({
+      key: 'diterima',
+      title: 'Permohonan Diterima',
+      date: dt?.waktu_masuk ?? null,
+      detail: 'Kedua operator telah menyetujui',
+      tone: 'emerald',
+      active: true,
+    })
+  } else if (row.status === 'DITOLAK') {
+    const dt = transmital.find((t) => t.tahapan === 'DITOLAK')
+    entries.push({
+      key: 'ditolak',
+      title: 'Permohonan Ditolak',
+      date: dt?.waktu_masuk ?? null,
+      detail: 'Ditolak secara final oleh Admin',
+      tone: 'rose',
+      active: true,
+    })
+  }
+
+  const DOT_COLOR: Record<TimelineEntry['tone'], string> = {
+    sky: 'bg-sky-500',
+    amber: 'bg-amber-500',
+    emerald: 'bg-emerald-500',
+    orange: 'bg-orange-500',
+    rose: 'bg-rose-500',
+    slate: 'bg-slate-300',
+  }
+
+  return (
+    <div className="mt-4 space-y-0">
+      {entries.map((entry, idx) => (
+        <div key={entry.key} className="relative pl-6 pb-4 last:pb-0">
+          <div className={`absolute left-0 top-1.5 w-3 h-3 rounded-full ${DOT_COLOR[entry.tone]} ${entry.active ? 'ring-4 ring-current/15' : ''}`} />
+          {idx < entries.length - 1 && (
+            <div className="absolute left-[5px] top-4 bottom-0 w-0.5 bg-[var(--color-surface-200)]" />
+          )}
+          <p className={`text-[12.5px] font-semibold ${entry.active ? 'text-[var(--color-navy-900)]' : 'text-[var(--color-ink-400)]'}`}>
+            {entry.title}
+          </p>
+          {entry.date && (
+            <p className="text-[11px] text-[var(--color-ink-500)]">{formatDate(entry.date)}</p>
+          )}
+          {entry.detail && (
+            <p className="text-[11px] text-[var(--color-ink-500)] mt-0.5">{entry.detail}</p>
+          )}
+          {entry.catatan && (
+            <p className="mt-1.5 text-[11px] text-orange-800 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-1.5">
+              <span className="font-semibold">Catatan:</span> {entry.catatan}
+            </p>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
