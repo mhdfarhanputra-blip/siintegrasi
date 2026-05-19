@@ -256,6 +256,28 @@ export default function UtilitasClient({
   async function handleResubmitRevisi(row: UtilitasRow) {
     if (!(await confirmActionAsync('Kirim ulang permohonan setelah revisi? Pemeriksaan akan dimulai dari awal.', 'Kirim Ulang', { confirmLabel: 'Ya, Kirim Ulang', tone: 'warning' }))) return
     try {
+      // Simpan catatan operator ke transmital sebelum reset
+      const catatanParts: string[] = []
+      if (row.review_satker_catatan) {
+        catatanParts.push(`Satker: ${row.review_satker_catatan}`)
+      }
+      if (row.review_perencanaan_catatan) {
+        catatanParts.push(`Perencanaan: ${row.review_perencanaan_catatan}`)
+      }
+      const catatanGabungan = catatanParts.join(' | ') || null
+
+      // Insert record transmital untuk mencatat revisi ini
+      const { error: transmitalError } = await supabase.from('transmital').insert({
+        utilitas_id: row.id,
+        tahapan: 'REVISI',
+        waktu_masuk: new Date().toISOString(),
+        catatan: catatanGabungan
+          ? `Revisi ke-${row.revisi_ke + 1}: ${catatanGabungan}`
+          : `Revisi ke-${row.revisi_ke + 1}`,
+      })
+      if (transmitalError) throw transmitalError
+
+      // Reset review tapi JANGAN hapus catatan (tetap tersimpan di transmital)
       const { error } = await supabase
         .from('utilitas')
         .update({
@@ -706,7 +728,7 @@ function UtilitasCard({
             reviewStatus={row.review_satker}
             catatan={row.review_satker_catatan}
             at={row.review_satker_at}
-            canAct={canReviewAs(userRole, 'satker') && inReview}
+            canAct={canReviewAs(userRole, 'satker') && inReview && row.review_satker === 'PENDING'}
             onOK={(e) => {
               e.stopPropagation()
               onReviewOK('satker')
@@ -722,7 +744,7 @@ function UtilitasCard({
             reviewStatus={row.review_perencanaan}
             catatan={row.review_perencanaan_catatan}
             at={row.review_perencanaan_at}
-            canAct={canReviewAs(userRole, 'perencanaan') && inReview}
+            canAct={canReviewAs(userRole, 'perencanaan') && inReview && row.review_perencanaan === 'PENDING'}
             onOK={(e) => {
               e.stopPropagation()
               onReviewOK('perencanaan')
