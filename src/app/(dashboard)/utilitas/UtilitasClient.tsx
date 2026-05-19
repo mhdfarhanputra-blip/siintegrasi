@@ -50,6 +50,7 @@ interface TransmitalRow {
   utilitas_id: string
   tahapan: string
   pic: string | null
+  profiles: { nama_lengkap: string } | null
   waktu_masuk: string
   waktu_selesai: string | null
   durasi_hari: number | null
@@ -408,16 +409,18 @@ export default function UtilitasClient({
           )}
         </div>
 
-        <div className="card-base p-5 h-fit lg:sticky lg:top-24">
-          <h3 className="text-[13px] font-semibold text-[var(--color-navy-900)] font-display flex items-center gap-2">
+        <div className="card-base p-5 h-fit lg:sticky lg:top-24 max-h-[calc(100vh-8rem)] flex flex-col">
+          <h3 className="text-[13px] font-semibold text-[var(--color-navy-900)] font-display flex items-center gap-2 flex-shrink-0">
             <Clock size={15} className="text-[var(--color-gold-500)]" />
             Timeline Transmital
           </h3>
-          {!selected ? (
-            <p className="mt-4 text-sm text-[var(--color-ink-400)]">Pilih permohonan untuk melihat timeline.</p>
-          ) : (
-            <DetailedTimeline row={selected} transmital={selectedTransmital} />
-          )}
+          <div className="overflow-y-auto flex-1 mt-1 -mr-2 pr-2">
+            {!selected ? (
+              <p className="mt-4 text-sm text-[var(--color-ink-400)]">Pilih permohonan untuk melihat timeline.</p>
+            ) : (
+              <DetailedTimeline row={selected} transmital={selectedTransmital} />
+            )}
+          </div>
         </div>
       </div>
 
@@ -505,7 +508,7 @@ function DetailedTimeline({ row, transmital }: { row: UtilitasRow; transmital: T
             title={STATUS_STYLE[t.tahapan]?.label ?? t.tahapan}
             date={t.waktu_masuk}
             detail={[
-              t.pic ? `PIC: ${t.pic}` : null,
+              t.profiles?.nama_lengkap ? `PIC: ${t.profiles.nama_lengkap}` : t.pic ? `PIC: ${t.pic}` : null,
               t.durasi_hari != null ? `${t.durasi_hari} hari` : null,
             ].filter(Boolean).join(' · ') || undefined}
             catatan={t.catatan}
@@ -514,27 +517,42 @@ function DetailedTimeline({ row, transmital }: { row: UtilitasRow; transmital: T
         )
       })}
 
-      {/* 3. Status pemeriksaan terkini (review paralel) */}
-      {row.status === 'PEMERIKSAAN' && (
-        <>
-          <TimelineNode
-            dotColor={row.review_satker === 'OK' ? 'bg-emerald-500' : row.review_satker === 'CATATAN' ? 'bg-orange-500' : 'bg-slate-300'}
-            title={`Review Satker: ${row.review_satker === 'OK' ? 'Disetujui' : row.review_satker === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}`}
-            date={row.review_satker_at}
-            catatan={row.review_satker_catatan}
-            inactive={row.review_satker === 'PENDING'}
-            hasLine
-          />
-          <TimelineNode
-            dotColor={row.review_perencanaan === 'OK' ? 'bg-emerald-500' : row.review_perencanaan === 'CATATAN' ? 'bg-orange-500' : 'bg-slate-300'}
-            title={`Review Perencanaan: ${row.review_perencanaan === 'OK' ? 'Disetujui' : row.review_perencanaan === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}`}
-            date={row.review_perencanaan_at}
-            catatan={row.review_perencanaan_catatan}
-            inactive={row.review_perencanaan === 'PENDING'}
-            hasLine={false}
-          />
-        </>
-      )}
+      {/* 3. Status pemeriksaan terkini (review paralel) + SLA */}
+      {row.status === 'PEMERIKSAAN' && (() => {
+        const pemeriksaanStart = transmital.find((t) => t.tahapan === 'PEMERIKSAAN')?.waktu_masuk
+        const SLA_HARI = 2
+        const elapsedMs = pemeriksaanStart ? Date.now() - new Date(pemeriksaanStart).getTime() : 0
+        const elapsedHari = Math.floor(elapsedMs / (1000 * 60 * 60 * 24))
+        const slaExpired = elapsedHari >= SLA_HARI
+        return (
+          <>
+            {slaExpired && (
+              <div className="relative pl-6 pb-4">
+                <div className="absolute left-0 top-1.5 w-3 h-3 rounded-full bg-rose-500 ring-4 ring-rose-500/15 animate-pulse" />
+                <div className="absolute left-[5px] top-4 bottom-0 w-0.5 bg-[var(--color-surface-200)]" />
+                <p className="text-[12.5px] font-semibold text-rose-700">SLA Terlampaui ({elapsedHari} hari)</p>
+                <p className="text-[11px] text-rose-600">Batas pemeriksaan {SLA_HARI} hari kerja telah terlewati</p>
+              </div>
+            )}
+            <TimelineNode
+              dotColor={row.review_satker === 'OK' ? 'bg-emerald-500' : row.review_satker === 'CATATAN' ? 'bg-orange-500' : 'bg-slate-300'}
+              title={`Review Satker: ${row.review_satker === 'OK' ? 'Disetujui' : row.review_satker === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}`}
+              date={row.review_satker_at}
+              catatan={row.review_satker_catatan}
+              inactive={row.review_satker === 'PENDING'}
+              hasLine
+            />
+            <TimelineNode
+              dotColor={row.review_perencanaan === 'OK' ? 'bg-emerald-500' : row.review_perencanaan === 'CATATAN' ? 'bg-orange-500' : 'bg-slate-300'}
+              title={`Review Perencanaan: ${row.review_perencanaan === 'OK' ? 'Disetujui' : row.review_perencanaan === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}`}
+              date={row.review_perencanaan_at}
+              catatan={row.review_perencanaan_catatan}
+              inactive={row.review_perencanaan === 'PENDING'}
+              hasLine={false}
+            />
+          </>
+        )
+      })()}
 
       {/* 4. Status REVISI — menunggu perbaikan */}
       {row.status === 'REVISI' && (

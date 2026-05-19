@@ -11,6 +11,9 @@ export default async function UtilitasPage() {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Enforce SLA: auto-reject permohonan yang > 2 hari tanpa pemeriksaan
+  try { await supabase.rpc('enforce_utilitas_sla') } catch { /* non-critical */ }
+
   const { data: utilitas } = await supabase
     .from('utilitas')
     .select('*')
@@ -18,7 +21,7 @@ export default async function UtilitasPage() {
 
   const { data: transmital } = await supabase
     .from('transmital')
-    .select('*')
+    .select('*, profiles:pic(nama_lengkap)')
     .order('waktu_masuk', { ascending: true })
 
   return (
