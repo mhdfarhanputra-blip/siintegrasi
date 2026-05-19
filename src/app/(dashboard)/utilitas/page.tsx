@@ -21,7 +21,7 @@ export default async function UtilitasPage() {
 
   const { data: transmital } = await supabase
     .from('transmital')
-    .select('*, profiles:pic(nama_lengkap)')
+    .select('*, profiles:pic(nama)')
     .order('waktu_masuk', { ascending: true })
 
   return (

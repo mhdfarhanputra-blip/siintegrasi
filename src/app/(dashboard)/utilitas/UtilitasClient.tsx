@@ -50,7 +50,7 @@ interface TransmitalRow {
   utilitas_id: string
   tahapan: string
   pic: string | null
-  profiles: { nama_lengkap: string } | null
+  profiles: { nama: string } | null
   waktu_masuk: string
   waktu_selesai: string | null
   durasi_hari: number | null
@@ -532,7 +532,7 @@ function DetailedTimeline({ row, transmital }: { row: UtilitasRow; transmital: T
             title={STATUS_STYLE[t.tahapan]?.label ?? t.tahapan}
             date={t.waktu_masuk}
             detail={[
-              t.profiles?.nama_lengkap ? `PIC: ${t.profiles.nama_lengkap}` : t.pic ? `PIC: ${t.pic}` : null,
+              t.profiles?.nama ? `PIC: ${t.profiles.nama}` : null,
               t.durasi_hari != null ? `${t.durasi_hari} hari` : null,
             ].filter(Boolean).join(' · ') || undefined}
             catatan={t.catatan}
@@ -1180,7 +1180,7 @@ function KronologisModal({
         {transmital.map((t, idx) => {
           const isLast = idx === transmital.length - 1
           const keterangan = getKeterangan(t)
-          const picName = t.profiles?.nama_lengkap ?? null
+          const picName = t.profiles?.nama ?? null
           const dotColor = t.tahapan === 'PEMERIKSAAN' ? 'bg-amber-500 ring-amber-500/10'
             : t.tahapan === 'REVISI' ? 'bg-orange-500 ring-orange-500/10'
             : t.tahapan === 'DITERIMA' ? 'bg-emerald-500 ring-emerald-500/10'
