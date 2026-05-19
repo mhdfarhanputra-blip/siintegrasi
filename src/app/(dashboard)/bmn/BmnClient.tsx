@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Pencil, Download, MapPin, User } from 'lucide-react'
@@ -48,6 +48,9 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
   const supabase = useMemo(() => createClient(), [])
 
   useRealtime('bmn')
+
+  // Sinkronisasi state saat server data berubah (realtime refresh)
+  useEffect(() => { setData(initialData) }, [initialData])
 
   async function handleImportFromPrevYear() {
     if (!(await confirmActionAsync(`Import data BMN dari TA ${tahunFilter - 1} ke TA ${tahunFilter}? Data akan diduplikasi dengan kondisi yang bisa diupdate.`))) return

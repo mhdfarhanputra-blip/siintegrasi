@@ -32,6 +32,15 @@ export function confirmAction(message: string): boolean {
  * Konfirmasi dialog modern dengan styling konsisten aplikasi.
  * Wajib pakai await karena async.
  */
-export function confirmActionAsync(message: string, title = 'Konfirmasi'): Promise<boolean> {
-  return confirmDialog({ title, message, tone: 'danger' })
+export function confirmActionAsync(
+  message: string,
+  title = 'Konfirmasi',
+  options?: { confirmLabel?: string; tone?: 'danger' | 'warning' | 'info' }
+): Promise<boolean> {
+  return confirmDialog({
+    title,
+    message,
+    tone: options?.tone ?? 'danger',
+    confirmLabel: options?.confirmLabel,
+  })
 }

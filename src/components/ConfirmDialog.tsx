@@ -112,7 +112,7 @@ export default function ConfirmDialogProvider() {
               onClick={() => handleResolve(true)}
               className={`px-4 py-2 rounded-lg text-sm text-white ${tone.btn} transition`}
             >
-              {opts?.confirmLabel ?? 'Hapus'}
+              {opts?.confirmLabel ?? 'Ya, Lanjutkan'}
             </button>
           </div>
         </Dialog.Content>

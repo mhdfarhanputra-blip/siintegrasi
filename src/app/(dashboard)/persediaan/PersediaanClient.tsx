@@ -59,6 +59,9 @@ export default function PersediaanClient({
 
   useRealtime('persediaan')
 
+  // Sinkronisasi state saat server data berubah (realtime refresh)
+  useEffect(() => { setData(initialData) }, [initialData])
+
   // Bangun opsi combobox dari master barang + nama barang yang sudah pernah dipakai
   const barangOptions = useMemo<ComboboxOption[]>(() => {
     const map = new Map<string, ComboboxOption>()

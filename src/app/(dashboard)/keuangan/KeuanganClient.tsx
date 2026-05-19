@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Wallet, Plus, Trash2, Download, Pencil, Receipt } from 'lucide-react'
@@ -71,6 +71,9 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
   const supabase = useMemo(() => createClient(), [])
 
   useRealtime('keuangan')
+
+  // Sinkronisasi state saat server data berubah (realtime refresh)
+  useEffect(() => { setData(initialData) }, [initialData])
 
   // Opsi kategori: master + kategori yang sudah pernah dipakai pada transaksi
   const kategoriOptions = useMemo<ComboboxOption[]>(() => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
@@ -96,7 +96,7 @@ export default function UtilitasClient({
   userRole,
 }: UtilitasClientProps) {
   const [data, setData] = useState(initialData)
-  const [transmital] = useState(initialTransmital)
+  const [transmital, setTransmital] = useState(initialTransmital)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<UtilitasRow | null>(null)
   const [linkDed, setLinkDed] = useState<string | null>(null)
@@ -109,6 +109,11 @@ export default function UtilitasClient({
   const supabase = useMemo(() => createClient(), [])
 
   useRealtime('utilitas')
+  useRealtime('transmital')
+
+  // Sinkronisasi state saat server data berubah (realtime refresh)
+  useEffect(() => { setData(initialData) }, [initialData])
+  useEffect(() => { setTransmital(initialTransmital) }, [initialTransmital])
 
   const isPengusul = userRole === 'Pengusul'
   const canCreate = userRole === 'Pengusul' || userRole === 'Admin'
@@ -173,7 +178,7 @@ export default function UtilitasClient({
   }
 
   async function handleMulaiPemeriksaan(row: UtilitasRow) {
-    if (!(await confirmActionAsync('Mulai proses pemeriksaan paralel Satker & Perencanaan?'))) return
+    if (!(await confirmActionAsync('Mulai proses pemeriksaan paralel Satker & Perencanaan?', 'Konfirmasi', { confirmLabel: 'Ya, Mulai', tone: 'info' }))) return
     try {
       const { error } = await supabase
         .from('utilitas')
@@ -195,7 +200,7 @@ export default function UtilitasClient({
   }
 
   async function handleReviewOK(row: UtilitasRow, op: Operator) {
-    if (!(await confirmActionAsync(`Tandai review ${op === 'satker' ? 'Operator Satker' : 'Operator Perencanaan'} sebagai OK?`))) return
+    if (!(await confirmActionAsync(`Tandai review ${op === 'satker' ? 'Operator Satker' : 'Operator Perencanaan'} sebagai OK?`, 'Konfirmasi Review', { confirmLabel: 'Ya, OK', tone: 'info' }))) return
     const patch =
       op === 'satker'
         ? {
@@ -249,7 +254,7 @@ export default function UtilitasClient({
   }
 
   async function handleResubmitRevisi(row: UtilitasRow) {
-    if (!(await confirmActionAsync('Kirim ulang permohonan setelah revisi? Pemeriksaan akan dimulai dari awal.'))) return
+    if (!(await confirmActionAsync('Kirim ulang permohonan setelah revisi? Pemeriksaan akan dimulai dari awal.', 'Kirim Ulang', { confirmLabel: 'Ya, Kirim Ulang', tone: 'warning' }))) return
     try {
       const { error } = await supabase
         .from('utilitas')
@@ -272,7 +277,7 @@ export default function UtilitasClient({
   }
 
   async function handleTolakFinal(row: UtilitasRow) {
-    if (!(await confirmActionAsync('Tolak permohonan secara final? Status akan menjadi DITOLAK.'))) return
+    if (!(await confirmActionAsync('Tolak permohonan secara final? Status akan menjadi DITOLAK.', 'Tolak Final', { confirmLabel: 'Ya, Tolak', tone: 'danger' }))) return
     try {
       const { error } = await supabase.from('utilitas').update({ status: 'DITOLAK' }).eq('id', row.id)
       if (error) throw error
@@ -389,9 +394,32 @@ export default function UtilitasClient({
           {!selected ? (
             <p className="mt-4 text-sm text-[var(--color-ink-400)]">Pilih permohonan untuk melihat timeline.</p>
           ) : selectedTransmital.length === 0 ? (
-            <p className="mt-4 text-sm text-[var(--color-ink-400)]">Belum ada tahapan transmital.</p>
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-[var(--color-ink-400)]">Belum ada tahapan transmital.</p>
+              {selected.status !== 'DIAJUKAN' && (
+                <div className="text-[12px] text-[var(--color-ink-500)] bg-[var(--color-surface-100)] rounded-lg p-3 space-y-1.5">
+                  <p className="font-semibold text-[var(--color-navy-900)]">Status: {STATUS_STYLE[selected.status]?.label ?? selected.status}</p>
+                  {selected.revisi_ke > 0 && <p>Revisi ke-{selected.revisi_ke}</p>}
+                  {selected.review_satker !== 'PENDING' && (
+                    <p>Satker: {selected.review_satker === 'OK' ? '✓ OK' : `Catatan — ${selected.review_satker_catatan ?? '-'}`}
+                      {selected.review_satker_at && ` (${formatDate(selected.review_satker_at)})`}
+                    </p>
+                  )}
+                  {selected.review_perencanaan !== 'PENDING' && (
+                    <p>Perencanaan: {selected.review_perencanaan === 'OK' ? '✓ OK' : `Catatan — ${selected.review_perencanaan_catatan ?? '-'}`}
+                      {selected.review_perencanaan_at && ` (${formatDate(selected.review_perencanaan_at)})`}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="mt-4 space-y-4">
+              {selected.revisi_ke > 0 && (
+                <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                  Revisi ke-{selected.revisi_ke}
+                </p>
+              )}
               {selectedTransmital.map((t, idx) => (
                 <div key={t.id} className="relative pl-6">
                   <div className="absolute left-0 top-1.5 w-3 h-3 rounded-full bg-[var(--color-gold-500)] ring-4 ring-[var(--color-gold-500)]/15" />
@@ -404,6 +432,7 @@ export default function UtilitasClient({
                   <p className="text-[11.5px] text-[var(--color-ink-500)]">
                     {formatDate(t.waktu_masuk)}
                     {t.durasi_hari != null ? ` · ${t.durasi_hari} hari` : ''}
+                    {t.pic ? ` · PIC: ${t.pic}` : ''}
                   </p>
                   {t.catatan && (
                     <p className="mt-1 text-[11.5px] text-[var(--color-ink-700)] bg-[var(--color-surface-100)] border border-[var(--color-surface-200)] rounded-lg px-2.5 py-1.5">
@@ -412,6 +441,30 @@ export default function UtilitasClient({
                   )}
                 </div>
               ))}
+              {/* Ringkasan review terkini */}
+              {selected.review_satker !== 'PENDING' && (
+                <div className="border-t border-[var(--color-surface-200)] pt-3 space-y-1.5">
+                  <p className="text-[11px] font-semibold text-[var(--color-ink-500)] uppercase">Review Terkini</p>
+                  <div className="text-[12px] space-y-1">
+                    <p>
+                      <span className="font-medium">Satker:</span>{' '}
+                      {selected.review_satker === 'OK' ? '✓ OK' : `Ada Catatan`}
+                      {selected.review_satker_at && ` — ${formatDate(selected.review_satker_at)}`}
+                    </p>
+                    {selected.review_satker === 'CATATAN' && selected.review_satker_catatan && (
+                      <p className="text-orange-700 bg-orange-50 rounded px-2 py-1 text-[11px]">{selected.review_satker_catatan}</p>
+                    )}
+                    <p>
+                      <span className="font-medium">Perencanaan:</span>{' '}
+                      {selected.review_perencanaan === 'OK' ? '✓ OK' : selected.review_perencanaan === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}
+                      {selected.review_perencanaan_at && ` — ${formatDate(selected.review_perencanaan_at)}`}
+                    </p>
+                    {selected.review_perencanaan === 'CATATAN' && selected.review_perencanaan_catatan && (
+                      <p className="text-orange-700 bg-orange-50 rounded px-2 py-1 text-[11px]">{selected.review_perencanaan_catatan}</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
