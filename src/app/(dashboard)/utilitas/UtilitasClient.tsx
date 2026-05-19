@@ -106,6 +106,7 @@ export default function UtilitasClient({
   const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [loading, setLoading] = useState(false)
   const [noteTarget, setNoteTarget] = useState<{ row: UtilitasRow; op: Operator } | null>(null)
+  const [kronologisRow, setKronologisRow] = useState<UtilitasRow | null>(null)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -420,6 +421,7 @@ export default function UtilitasClient({
                 onOpenNote={(op) => setNoteTarget({ row, op })}
                 onResubmit={() => handleResubmitRevisi(row)}
                 onTolakFinal={() => handleTolakFinal(row)}
+                onShowKronologis={() => setKronologisRow(row)}
               />
             ))
           )}
@@ -457,6 +459,12 @@ export default function UtilitasClient({
         target={noteTarget}
         onClose={() => setNoteTarget(null)}
         onSubmit={(c) => noteTarget && submitNote(noteTarget.row, noteTarget.op, c)}
+      />
+
+      <KronologisModal
+        row={kronologisRow}
+        transmital={kronologisRow ? transmital.filter((t) => t.utilitas_id === kronologisRow.id) : []}
+        onClose={() => setKronologisRow(null)}
       />
     </div>
   )
@@ -672,6 +680,7 @@ interface UtilitasCardProps {
   onOpenNote: (op: Operator) => void
   onResubmit: () => void
   onTolakFinal: () => void
+  onShowKronologis: () => void
 }
 
 function UtilitasCard({
@@ -687,6 +696,7 @@ function UtilitasCard({
   onOpenNote,
   onResubmit,
   onTolakFinal,
+  onShowKronologis,
 }: UtilitasCardProps) {
   const st = STATUS_STYLE[row.status] ?? STATUS_STYLE.DIAJUKAN
   const isAdmin = userRole === 'Admin'
@@ -835,6 +845,15 @@ function UtilitasCard({
             <Pencil size={13} /> Ubah
           </button>
         )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onShowKronologis()
+          }}
+          className="px-3 py-1.5 rounded-lg text-[11.5px] border border-[var(--color-surface-200)] hover:bg-[var(--color-surface-100)] transition flex items-center gap-1.5 text-[var(--color-ink-700)]"
+        >
+          <Clock size={13} /> Kronologis
+        </button>
         {canDelete && (
           <button
             onClick={(e) => {
@@ -1088,6 +1107,115 @@ function NoteModal({
           </button>
         </div>
       </form>
+    </Modal>
+  )
+}
+
+function KronologisModal({
+  row,
+  transmital,
+  onClose,
+}: {
+  row: UtilitasRow | null
+  transmital: TransmitalRow[]
+  onClose: () => void
+}) {
+  if (!row) return null
+
+  const formatDateTime = (d: string) =>
+    new Date(d).toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+
+  return (
+    <Modal
+      isOpen={row !== null}
+      onClose={onClose}
+      title={`Kronologis: ${row.jenis_pekerjaan}`}
+    >
+      <div className="space-y-1 mb-4">
+        <p className="text-[12px] text-[var(--color-ink-500)]">
+          {row.instansi || 'Tanpa instansi'} · {row.lokasi || 'Tanpa lokasi'}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold ${STATUS_STYLE[row.status]?.tone ?? ''}`}>
+            {STATUS_STYLE[row.status]?.label ?? row.status}
+          </span>
+          {row.revisi_ke > 0 && (
+            <span className="px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              Revisi ke-{row.revisi_ke}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="max-h-[60vh] overflow-y-auto -mr-2 pr-2">
+        <table className="w-full text-[11.5px]">
+          <thead className="sticky top-0 bg-white">
+            <tr className="border-b border-[var(--color-surface-200)] text-left text-[var(--color-ink-500)]">
+              <th className="pb-2 pr-2 font-semibold">No</th>
+              <th className="pb-2 pr-2 font-semibold">Tanggal</th>
+              <th className="pb-2 pr-2 font-semibold">Tahapan</th>
+              <th className="pb-2 pr-2 font-semibold">PIC</th>
+              <th className="pb-2 font-semibold">Catatan</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--color-surface-100)]">
+            <tr className="align-top">
+              <td className="py-2 pr-2 text-[var(--color-ink-400)]">1</td>
+              <td className="py-2 pr-2 whitespace-nowrap">{formatDateTime(row.tgl_usul)}</td>
+              <td className="py-2 pr-2">
+                <span className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 text-[10px] font-medium">Diajukan</span>
+              </td>
+              <td className="py-2 pr-2 text-[var(--color-ink-500)]">Pengusul</td>
+              <td className="py-2 text-[var(--color-ink-500)]">Usulan baru diajukan</td>
+            </tr>
+            {transmital.map((t, idx) => (
+              <tr key={t.id} className="align-top">
+                <td className="py-2 pr-2 text-[var(--color-ink-400)]">{idx + 2}</td>
+                <td className="py-2 pr-2 whitespace-nowrap">{formatDateTime(t.waktu_masuk)}</td>
+                <td className="py-2 pr-2">
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                    t.tahapan === 'PEMERIKSAAN' ? 'bg-amber-50 text-amber-700' :
+                    t.tahapan === 'REVISI' ? 'bg-orange-50 text-orange-700' :
+                    t.tahapan === 'DITERIMA' ? 'bg-emerald-50 text-emerald-700' :
+                    t.tahapan === 'DITOLAK' ? 'bg-rose-50 text-rose-700' :
+                    'bg-slate-100 text-slate-600'
+                  }`}>
+                    {STATUS_STYLE[t.tahapan]?.label ?? t.tahapan}
+                  </span>
+                </td>
+                <td className="py-2 pr-2 text-[var(--color-ink-500)]">
+                  {t.profiles?.nama_lengkap ?? (t.pic ? t.pic.slice(0, 8) + '...' : '-')}
+                </td>
+                <td className="py-2 text-[var(--color-ink-700)]">
+                  {t.catatan || '-'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {transmital.length === 0 && (
+          <p className="text-center text-[var(--color-ink-400)] text-sm py-6">
+            Belum ada riwayat pemeriksaan.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 rounded-lg text-sm bg-[var(--color-navy-900)] text-white hover:bg-[var(--color-navy-800)] transition"
+        >
+          Tutup
+        </button>
+      </div>
     </Modal>
   )
 }
