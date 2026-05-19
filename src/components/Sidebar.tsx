@@ -158,8 +158,8 @@ export default function Sidebar({ userRole }: SidebarProps) {
       >
         <div className="relative px-5 py-5 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-black/20 p-1.5">
-              <Image src="/logo.png" alt="Logo SI Terintegrasi" width={36} height={36} className="object-contain" priority />
+            <div className="w-11 h-11 rounded-xl overflow-hidden shadow-lg shadow-black/20">
+              <Image src="/logo.png" alt="Logo SI Terintegrasi" width={44} height={44} className="w-full h-full object-cover" priority />
             </div>
             <div>
               <h2 className="text-white font-semibold text-sm tracking-tight font-display">SI Terintegrasi</h2>

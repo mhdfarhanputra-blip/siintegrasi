@@ -69,13 +69,13 @@ export default function LoginPage() {
           }}
         />
         <div className="relative flex items-center gap-3">
-          <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg p-1.5 ring-1 ring-white/20">
+          <div className="w-11 h-11 rounded-xl overflow-hidden shadow-lg ring-1 ring-white/20">
             <Image
               src="/logo.png"
               alt="Logo SI Terintegrasi"
-              width={36}
-              height={36}
-              className="w-full h-full object-contain"
+              width={44}
+              height={44}
+              className="w-full h-full object-cover"
               priority
             />
           </div>
@@ -111,13 +111,13 @@ export default function LoginPage() {
       <div className="flex items-center justify-center p-6 sm:p-10 bg-[var(--color-surface-50)]">
         <div className="w-full max-w-md">
           <div className="lg:hidden mb-8 flex items-center gap-3">
-            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-md p-1.5 ring-1 ring-[var(--color-surface-200)]">
+            <div className="w-11 h-11 rounded-xl overflow-hidden shadow-md ring-1 ring-[var(--color-surface-200)]">
               <Image
                 src="/logo.png"
                 alt="Logo SI Terintegrasi"
-                width={36}
-                height={36}
-                className="w-full h-full object-contain"
+                width={44}
+                height={44}
+                className="w-full h-full object-cover"
               />
             </div>
             <div>
