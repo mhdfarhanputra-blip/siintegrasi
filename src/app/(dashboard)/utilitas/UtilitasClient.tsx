@@ -1131,13 +1131,27 @@ function KronologisModal({
       minute: '2-digit',
     })
 
+  // Beri keterangan otomatis untuk record tanpa catatan
+  function getKeterangan(t: TransmitalRow): string {
+    if (t.catatan) return t.catatan
+    switch (t.tahapan) {
+      case 'DIAJUKAN': return 'Usulan baru diajukan'
+      case 'PEMERIKSAAN': return 'Pemeriksaan dimulai (review paralel)'
+      case 'REVISI': return 'Status berubah ke revisi'
+      case 'DITERIMA': return 'Permohonan diterima (kedua operator OK)'
+      case 'DITOLAK': return 'Permohonan ditolak'
+      default: return '-'
+    }
+  }
+
   return (
     <Modal
       isOpen={row !== null}
       onClose={onClose}
-      title={`Kronologis: ${row.jenis_pekerjaan}`}
+      title={`Kronologis Usulan`}
     >
-      <div className="space-y-1 mb-4">
+      <div className="space-y-1.5 mb-4">
+        <p className="text-[13px] font-semibold text-[var(--color-navy-900)]">{row.jenis_pekerjaan}</p>
         <p className="text-[12px] text-[var(--color-ink-500)]">
           {row.instansi || 'Tanpa instansi'} · {row.lokasi || 'Tanpa lokasi'}
         </p>
@@ -1153,52 +1167,76 @@ function KronologisModal({
         </div>
       </div>
 
-      <div className="max-h-[60vh] overflow-y-auto -mr-2 pr-2">
-        <table className="w-full text-[11.5px]">
-          <thead className="sticky top-0 bg-white">
-            <tr className="border-b border-[var(--color-surface-200)] text-left text-[var(--color-ink-500)]">
-              <th className="pb-2 pr-2 font-semibold">No</th>
-              <th className="pb-2 pr-2 font-semibold">Tanggal</th>
-              <th className="pb-2 pr-2 font-semibold">Tahapan</th>
-              <th className="pb-2 pr-2 font-semibold">PIC</th>
-              <th className="pb-2 font-semibold">Catatan</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--color-surface-100)]">
-            <tr className="align-top">
-              <td className="py-2 pr-2 text-[var(--color-ink-400)]">1</td>
-              <td className="py-2 pr-2 whitespace-nowrap">{formatDateTime(row.tgl_usul)}</td>
-              <td className="py-2 pr-2">
-                <span className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 text-[10px] font-medium">Diajukan</span>
-              </td>
-              <td className="py-2 pr-2 text-[var(--color-ink-500)]">Pengusul</td>
-              <td className="py-2 text-[var(--color-ink-500)]">Usulan baru diajukan</td>
-            </tr>
-            {transmital.map((t, idx) => (
-              <tr key={t.id} className="align-top">
-                <td className="py-2 pr-2 text-[var(--color-ink-400)]">{idx + 2}</td>
-                <td className="py-2 pr-2 whitespace-nowrap">{formatDateTime(t.waktu_masuk)}</td>
-                <td className="py-2 pr-2">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                    t.tahapan === 'PEMERIKSAAN' ? 'bg-amber-50 text-amber-700' :
-                    t.tahapan === 'REVISI' ? 'bg-orange-50 text-orange-700' :
-                    t.tahapan === 'DITERIMA' ? 'bg-emerald-50 text-emerald-700' :
-                    t.tahapan === 'DITOLAK' ? 'bg-rose-50 text-rose-700' :
-                    'bg-slate-100 text-slate-600'
-                  }`}>
-                    {STATUS_STYLE[t.tahapan]?.label ?? t.tahapan}
-                  </span>
-                </td>
-                <td className="py-2 pr-2 text-[var(--color-ink-500)]">
-                  {t.profiles?.nama_lengkap ?? (t.pic ? t.pic.slice(0, 8) + '...' : '-')}
-                </td>
-                <td className="py-2 text-[var(--color-ink-700)]">
-                  {t.catatan || '-'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="max-h-[60vh] overflow-y-auto -mr-2 pr-2 space-y-0">
+        {/* Timeline format untuk kronologis */}
+        <div className="relative pl-6 pb-3">
+          <div className="absolute left-0 top-1.5 w-3 h-3 rounded-full bg-sky-500 ring-4 ring-sky-500/10" />
+          <div className="absolute left-[5px] top-4 bottom-0 w-0.5 bg-[var(--color-surface-200)]" />
+          <p className="text-[12px] font-semibold text-[var(--color-navy-900)]">Usulan Diajukan</p>
+          <p className="text-[11px] text-[var(--color-ink-500)]">{formatDateTime(row.tgl_usul)}</p>
+          <p className="text-[11px] text-[var(--color-ink-500)]">Pengusul mengajukan permohonan</p>
+        </div>
+
+        {transmital.map((t, idx) => {
+          const isLast = idx === transmital.length - 1
+          const keterangan = getKeterangan(t)
+          const picName = t.profiles?.nama_lengkap ?? null
+          const dotColor = t.tahapan === 'PEMERIKSAAN' ? 'bg-amber-500 ring-amber-500/10'
+            : t.tahapan === 'REVISI' ? 'bg-orange-500 ring-orange-500/10'
+            : t.tahapan === 'DITERIMA' ? 'bg-emerald-500 ring-emerald-500/10'
+            : t.tahapan === 'DITOLAK' ? 'bg-rose-500 ring-rose-500/10'
+            : 'bg-slate-400 ring-slate-400/10'
+
+          return (
+            <div key={t.id} className="relative pl-6 pb-3">
+              <div className={`absolute left-0 top-1.5 w-3 h-3 rounded-full ${dotColor} ring-4`} />
+              {!isLast && (
+                <div className="absolute left-[5px] top-4 bottom-0 w-0.5 bg-[var(--color-surface-200)]" />
+              )}
+              <div className="flex items-center gap-2">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                  t.tahapan === 'PEMERIKSAAN' ? 'bg-amber-50 text-amber-700' :
+                  t.tahapan === 'REVISI' ? 'bg-orange-50 text-orange-700' :
+                  t.tahapan === 'DITERIMA' ? 'bg-emerald-50 text-emerald-700' :
+                  t.tahapan === 'DITOLAK' ? 'bg-rose-50 text-rose-700' :
+                  'bg-slate-100 text-slate-600'
+                }`}>
+                  {STATUS_STYLE[t.tahapan]?.label ?? t.tahapan}
+                </span>
+                {picName && (
+                  <span className="text-[10.5px] text-[var(--color-ink-400)]">oleh {picName}</span>
+                )}
+              </div>
+              <p className="text-[11px] text-[var(--color-ink-500)] mt-0.5">{formatDateTime(t.waktu_masuk)}</p>
+              <p className="text-[11.5px] text-[var(--color-ink-700)] mt-0.5">{keterangan}</p>
+            </div>
+          )
+        })}
+
+        {/* Status review terkini */}
+        {row.status !== 'DIAJUKAN' && (
+          <div className="border-t border-[var(--color-surface-200)] pt-3 mt-2">
+            <p className="text-[10.5px] font-semibold text-[var(--color-ink-500)] uppercase mb-2">Status Review Terkini</p>
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="border border-[var(--color-surface-200)] rounded-lg p-2">
+                <p className="font-semibold text-[var(--color-navy-900)]">Satker</p>
+                <p className={row.review_satker === 'OK' ? 'text-emerald-700' : row.review_satker === 'CATATAN' ? 'text-orange-700' : 'text-slate-500'}>
+                  {row.review_satker === 'OK' ? 'Disetujui' : row.review_satker === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}
+                </p>
+                {row.review_satker_at && <p className="text-[var(--color-ink-400)] text-[10px]">{formatDateTime(row.review_satker_at)}</p>}
+                {row.review_satker_catatan && <p className="text-orange-700 mt-1">{row.review_satker_catatan}</p>}
+              </div>
+              <div className="border border-[var(--color-surface-200)] rounded-lg p-2">
+                <p className="font-semibold text-[var(--color-navy-900)]">Perencanaan</p>
+                <p className={row.review_perencanaan === 'OK' ? 'text-emerald-700' : row.review_perencanaan === 'CATATAN' ? 'text-orange-700' : 'text-slate-500'}>
+                  {row.review_perencanaan === 'OK' ? 'Disetujui' : row.review_perencanaan === 'CATATAN' ? 'Ada Catatan' : 'Menunggu'}
+                </p>
+                {row.review_perencanaan_at && <p className="text-[var(--color-ink-400)] text-[10px]">{formatDateTime(row.review_perencanaan_at)}</p>}
+                {row.review_perencanaan_catatan && <p className="text-orange-700 mt-1">{row.review_perencanaan_catatan}</p>}
+              </div>
+            </div>
+          </div>
+        )}
 
         {transmital.length === 0 && (
           <p className="text-center text-[var(--color-ink-400)] text-sm py-6">
