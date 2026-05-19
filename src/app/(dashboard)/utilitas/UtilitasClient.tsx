@@ -202,21 +202,32 @@ export default function UtilitasClient({
 
   async function handleReviewOK(row: UtilitasRow, op: Operator) {
     if (!(await confirmActionAsync(`Tandai review ${op === 'satker' ? 'Operator Satker' : 'Operator Perencanaan'} sebagai OK?`, 'Konfirmasi Review', { confirmLabel: 'Ya, OK', tone: 'info' }))) return
+    const opLabel = op === 'satker' ? 'Operator Satker' : 'Operator Perencanaan'
+    const now = new Date().toISOString()
     const patch =
       op === 'satker'
         ? {
             review_satker: 'OK' as const,
             review_satker_catatan: null,
             review_satker_by: currentUserId,
-            review_satker_at: new Date().toISOString(),
+            review_satker_at: now,
           }
         : {
             review_perencanaan: 'OK' as const,
             review_perencanaan_catatan: null,
             review_perencanaan_by: currentUserId,
-            review_perencanaan_at: new Date().toISOString(),
+            review_perencanaan_at: now,
           }
     try {
+      // Simpan aksi ke transmital sebagai record permanen
+      const { error: transmitalErr } = await supabase.from('transmital').insert({
+        utilitas_id: row.id,
+        tahapan: 'PEMERIKSAAN',
+        pic: currentUserId,
+        waktu_masuk: now,
+        catatan: `${opLabel}: Disetujui (OK)`,
+      })
+      if (transmitalErr) throw transmitalErr
       const { error } = await supabase.from('utilitas').update(patch).eq('id', row.id)
       if (error) throw error
       showSuccess('Review berhasil diperbarui')
@@ -228,21 +239,32 @@ export default function UtilitasClient({
   }
 
   async function submitNote(row: UtilitasRow, op: Operator, catatan: string) {
+    const opLabel = op === 'satker' ? 'Operator Satker' : 'Operator Perencanaan'
+    const now = new Date().toISOString()
     const patch =
       op === 'satker'
         ? {
             review_satker: 'CATATAN' as const,
             review_satker_catatan: catatan,
             review_satker_by: currentUserId,
-            review_satker_at: new Date().toISOString(),
+            review_satker_at: now,
           }
         : {
             review_perencanaan: 'CATATAN' as const,
             review_perencanaan_catatan: catatan,
             review_perencanaan_by: currentUserId,
-            review_perencanaan_at: new Date().toISOString(),
+            review_perencanaan_at: now,
           }
     try {
+      // Simpan catatan ke transmital sebagai record permanen
+      const { error: transmitalErr } = await supabase.from('transmital').insert({
+        utilitas_id: row.id,
+        tahapan: 'PEMERIKSAAN',
+        pic: currentUserId,
+        waktu_masuk: now,
+        catatan: `${opLabel}: ${catatan}`,
+      })
+      if (transmitalErr) throw transmitalErr
       const { error } = await supabase.from('utilitas').update(patch).eq('id', row.id)
       if (error) throw error
       setNoteTarget(null)
@@ -257,28 +279,22 @@ export default function UtilitasClient({
   async function handleResubmitRevisi(row: UtilitasRow) {
     if (!(await confirmActionAsync('Kirim ulang permohonan setelah revisi? Pemeriksaan akan dimulai dari awal.', 'Kirim Ulang', { confirmLabel: 'Ya, Kirim Ulang', tone: 'warning' }))) return
     try {
-      // Simpan catatan operator ke transmital sebelum reset
-      const catatanParts: string[] = []
-      if (row.review_satker_catatan) {
-        catatanParts.push(`Satker: ${row.review_satker_catatan}`)
-      }
-      if (row.review_perencanaan_catatan) {
-        catatanParts.push(`Perencanaan: ${row.review_perencanaan_catatan}`)
-      }
-      const catatanGabungan = catatanParts.join(' | ') || null
+      // Simpan ringkasan review ke transmital sebelum reset
+      const parts: string[] = []
+      parts.push(`Satker: ${row.review_satker === 'OK' ? 'OK' : row.review_satker_catatan || 'Catatan'}`)
+      parts.push(`Perencanaan: ${row.review_perencanaan === 'OK' ? 'OK' : row.review_perencanaan_catatan || 'Catatan'}`)
+      const ringkasan = parts.join(' | ')
 
-      // Insert record transmital untuk mencatat revisi ini
-      const { error: transmitalError } = await supabase.from('transmital').insert({
+      // Insert record transmital untuk mencatat pengajuan ulang
+      await supabase.from('transmital').insert({
         utilitas_id: row.id,
         tahapan: 'REVISI',
+        pic: currentUserId,
         waktu_masuk: new Date().toISOString(),
-        catatan: catatanGabungan
-          ? `Revisi ke-${row.revisi_ke + 1}: ${catatanGabungan}`
-          : `Revisi ke-${row.revisi_ke + 1}`,
+        catatan: `Pengusul mengirim ulang (Revisi ke-${row.revisi_ke + 1}). Hasil review sebelumnya: ${ringkasan}`,
       })
-      if (transmitalError) throw transmitalError
 
-      // Reset review tapi JANGAN hapus catatan (tetap tersimpan di transmital)
+      // Reset review untuk putaran baru
       const { error } = await supabase
         .from('utilitas')
         .update({
