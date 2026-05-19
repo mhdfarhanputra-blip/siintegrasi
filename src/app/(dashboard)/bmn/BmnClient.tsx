@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Pencil, Download, MapPin, User } from 'lucide-react'
+import { Plus, Trash2, Pencil, Download, MapPin, User, Upload } from 'lucide-react'
 import Modal from '@/components/Modal'
 import FileUpload from '@/components/FileUpload'
 import SearchInput from '@/components/SearchInput'
@@ -93,6 +93,31 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
     )
   })
 
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const [pdfImportLoading, setPdfImportLoading] = useState(false)
+
+  async function handleImportPdf(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setPdfImportLoading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('tahun_pencatatan', String(tahunFilter))
+      const res = await fetch('/api/bmn/import', { method: 'POST', body: formData })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Gagal import')
+      showSuccess(json.message)
+      router.refresh()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Kesalahan tidak dikenal'
+      showError('Gagal import PDF', msg)
+    } finally {
+      setPdfImportLoading(false)
+    }
+  }
+
   const openAdd = () => {
     setEditing(null)
     setLinkFoto(null)
@@ -169,6 +194,22 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
           >
             {importLoading ? 'Mengimport...' : `Import dari TA ${tahunFilter - 1}`}
           </button>
+          <button
+            onClick={() => pdfInputRef.current?.click()}
+            disabled={pdfImportLoading}
+            className="border border-[var(--color-surface-200)] text-[var(--color-ink-700)] px-4 py-2 rounded-lg hover:bg-[var(--color-surface-100)] transition flex items-center gap-2 text-sm disabled:opacity-50"
+          >
+            <Upload size={16} />
+            {pdfImportLoading ? 'Memproses...' : 'Import PDF Label'}
+          </button>
+          <input
+            ref={pdfInputRef}
+            type="file"
+            accept=".pdf"
+            className="hidden"
+            onChange={handleImportPdf}
+            aria-label="Pilih file PDF label BMN"
+          />
           <button
             onClick={openAdd}
             className="bg-[var(--color-navy-900)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-navy-800)] transition flex items-center gap-2 text-sm"
