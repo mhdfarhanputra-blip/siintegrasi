@@ -63,6 +63,11 @@ export default function RootLayout({
           Lompat ke konten utama
         </a>
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}`
+          }}
+        />
         <ConfirmDialogProvider />
         <Toaster
           position="bottom-right"
