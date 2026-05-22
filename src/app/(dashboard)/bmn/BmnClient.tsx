@@ -7,6 +7,7 @@ import { Plus, Trash2, Pencil, Download, MapPin, User, Upload } from 'lucide-rea
 import Modal from '@/components/Modal'
 import FileUpload from '@/components/FileUpload'
 import SearchInput from '@/components/SearchInput'
+import Pagination from '@/components/Pagination'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
@@ -82,16 +83,31 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
     }
   }
 
+  const [kondisiFilter, setKondisiFilter] = useState<string>('Semua')
+  const [statusFilter, setStatusFilter] = useState<string>('Semua')
+  const [currentPage, setCurrentPage] = useState(1)
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1) }, [tahunFilter, kondisiFilter, statusFilter, search])
+
   const filtered = data.filter((d) => {
     if (d.tahun_pencatatan !== tahunFilter) return false
+    if (kondisiFilter !== 'Semua' && d.kondisi !== kondisiFilter) return false
+    if (statusFilter !== 'Semua' && d.status_penggunaan !== statusFilter) return false
     const q = search.toLowerCase()
     return (
       d.nama_aset.toLowerCase().includes(q) ||
       d.kode_aset.toLowerCase().includes(q) ||
       (d.lokasi ?? '').toLowerCase().includes(q) ||
-      (d.pengguna ?? '').toLowerCase().includes(q)
+      (d.pengguna ?? '').toLowerCase().includes(q) ||
+      (d.spesifikasi ?? '').toLowerCase().includes(q)
     )
   })
+
+  const ITEMS_PER_PAGE = 50
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedData = filtered.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE)
 
   const pdfInputRef = useRef<HTMLInputElement>(null)
   const [pdfImportLoading, setPdfImportLoading] = useState(false)
@@ -229,17 +245,38 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select
           value={tahunFilter}
-          onChange={(e) => setTahunFilter(Number(e.target.value))}
+          onChange={(e) => { setTahunFilter(Number(e.target.value)); setCurrentPage(1) }}
           className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
         >
           {[2024, 2025, 2026, 2027].map((y) => (
             <option key={y} value={y}>TA {y}</option>
           ))}
         </select>
+        <select
+          value={kondisiFilter}
+          onChange={(e) => { setKondisiFilter(e.target.value); setCurrentPage(1) }}
+          className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+        >
+          <option value="Semua">Semua Kondisi</option>
+          <option value="Baik">Baik</option>
+          <option value="Rusak Ringan">Rusak Ringan</option>
+          <option value="Rusak Berat">Rusak Berat</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }}
+          className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+        >
+          <option value="Semua">Semua Status</option>
+          <option value="Digunakan">Digunakan</option>
+          <option value="Tidak Digunakan">Tidak Digunakan</option>
+        </select>
         <div className="w-full sm:max-w-xs">
-          <SearchInput value={search} onChange={setSearch} placeholder="Cari aset..." />
+          <SearchInput value={search} onChange={(v) => { setSearch(v); setCurrentPage(1) }} placeholder="Cari aset..." />
         </div>
-        <span className="text-[11px] text-[var(--color-ink-500)]">{filtered.length} aset</span>
+        <span className="text-[11px] text-[var(--color-ink-500)]">
+          {filtered.length} aset{filtered.length > ITEMS_PER_PAGE ? ` · Hal ${safePage}/${totalPages}` : ''}
+        </span>
       </div>
 
       {filtered.length === 0 ? (
@@ -247,67 +284,74 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
           {data.length === 0 ? 'Belum ada data aset BMN' : 'Tidak ada hasil pencarian'}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((row) => (
-            <div
-              key={row.id}
-              className="bg-white rounded-xl p-5 shadow-sm border border-[var(--color-surface-200)] flex flex-col"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-xs text-[var(--color-ink-400)] font-mono">{row.kode_aset}</p>
-                  <h3 className="font-semibold text-[var(--color-navy-900)] mt-0.5">{row.nama_aset}</h3>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedData.map((row) => (
+              <div
+                key={row.id}
+                className="bg-white rounded-xl p-5 shadow-sm border border-[var(--color-surface-200)] flex flex-col"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="text-xs text-[var(--color-ink-400)] font-mono">{row.kode_aset}</p>
+                    <h3 className="font-semibold text-[var(--color-navy-900)] mt-0.5">{row.nama_aset}</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEdit(row)}
+                      className="text-[var(--color-ink-400)] hover:text-[var(--color-gold-500)] transition"
+                      title="Ubah"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(row.id)}
+                      className="text-red-400 hover:text-red-600 transition"
+                      title="Hapus"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => openEdit(row)}
-                    className="text-[var(--color-ink-400)] hover:text-[var(--color-gold-500)] transition"
-                    title="Ubah"
+                {row.spesifikasi && (
+                  <p className="text-xs text-[var(--color-ink-500)] mb-3">{row.spesifikasi}</p>
+                )}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      KONDISI_COLOR[row.kondisi] || 'bg-[var(--color-surface-50)] text-[var(--color-ink-700)]'
+                    }`}
                   >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(row.id)}
-                    className="text-red-400 hover:text-red-600 transition"
-                    title="Hapus"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                    {row.kondisi}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                    {row.status_penggunaan}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-[var(--color-gold-500)] mb-3">
+                  {formatCurrency(row.nilai_aset)}
+                </p>
+                <div className="mt-auto flex items-center gap-4 text-xs text-[var(--color-ink-500)]">
+                  {row.lokasi && (
+                    <span className="flex items-center gap-1">
+                      <MapPin size={12} /> {row.lokasi}
+                    </span>
+                  )}
+                  {row.pengguna && (
+                    <span className="flex items-center gap-1">
+                      <User size={12} /> {row.pengguna}
+                    </span>
+                  )}
                 </div>
               </div>
-              {row.spesifikasi && (
-                <p className="text-xs text-[var(--color-ink-500)] mb-3">{row.spesifikasi}</p>
-              )}
-              <div className="flex flex-wrap gap-2 mb-3">
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    KONDISI_COLOR[row.kondisi] || 'bg-[var(--color-surface-50)] text-[var(--color-ink-700)]'
-                  }`}
-                >
-                  {row.kondisi}
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                  {row.status_penggunaan}
-                </span>
-              </div>
-              <p className="text-sm font-semibold text-[var(--color-gold-500)] mb-3">
-                {formatCurrency(row.nilai_aset)}
-              </p>
-              <div className="mt-auto flex items-center gap-4 text-xs text-[var(--color-ink-500)]">
-                {row.lokasi && (
-                  <span className="flex items-center gap-1">
-                    <MapPin size={12} /> {row.lokasi}
-                  </span>
-                )}
-                {row.pengguna && (
-                  <span className="flex items-center gap-1">
-                    <User size={12} /> {row.pengguna}
-                  </span>
-                )}
-              </div>
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       <Modal
