@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Pencil, Download, FileImage } from 'lucide-react'
 import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
+import Pagination from '@/components/Pagination'
 import FileUpload from '@/components/FileUpload'
 import Combobox, { type ComboboxOption } from '@/components/Combobox'
 import { useRealtime } from '@/lib/useRealtime'
@@ -34,6 +35,8 @@ interface MasterBarang {
   kategori: string | null
 }
 
+const ITEMS_PER_PAGE = 50
+
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -49,6 +52,8 @@ export default function PersediaanClient({
   const [editing, setEditing] = useState<PersediaanRow | null>(null)
   const [search, setSearch] = useState('')
   const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
+  const [jenisFilter, setJenisFilter] = useState<string>('Semua')
+  const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [linkDokumentasi, setLinkDokumentasi] = useState<string | null>(null)
   const [namaBarang, setNamaBarang] = useState('')
@@ -106,15 +111,25 @@ export default function PersediaanClient({
     }
   }
 
-  const filtered = data.filter((d) => {
-    if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
+  const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return (
-      d.nama_barang.toLowerCase().includes(q) ||
-      (d.supplier_tujuan ?? '').toLowerCase().includes(q) ||
-      d.jenis.toLowerCase().includes(q)
-    )
-  })
+    return data.filter((d) => {
+      if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
+      if (jenisFilter !== 'Semua' && d.jenis !== jenisFilter) return false
+      return (
+        d.nama_barang.toLowerCase().includes(q) ||
+        (d.supplier_tujuan ?? '').toLowerCase().includes(q) ||
+        d.jenis.toLowerCase().includes(q)
+      )
+    })
+  }, [data, search, tahunFilter, jenisFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedData = filtered.slice(
+    (safePage - 1) * ITEMS_PER_PAGE,
+    safePage * ITEMS_PER_PAGE
+  )
 
   const latestByItem = useMemo(() => {
     const latest = new Map<string, PersediaanRow>()
@@ -257,15 +272,24 @@ export default function PersediaanClient({
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select
           value={tahunFilter}
-          onChange={(e) => setTahunFilter(Number(e.target.value))}
+          onChange={(e) => { setTahunFilter(Number(e.target.value)); setCurrentPage(1) }}
           className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
         >
           {[2024, 2025, 2026, 2027].map((y) => (
             <option key={y} value={y}>TA {y}</option>
           ))}
         </select>
+        <select
+          value={jenisFilter}
+          onChange={(e) => { setJenisFilter(e.target.value); setCurrentPage(1) }}
+          className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+        >
+          <option value="Semua">Semua Jenis</option>
+          <option value="Masuk">Masuk</option>
+          <option value="Keluar">Keluar</option>
+        </select>
         <div className="w-full sm:max-w-xs">
-          <SearchInput value={search} onChange={setSearch} placeholder="Cari barang..." />
+          <SearchInput value={search} onChange={(v) => { setSearch(v); setCurrentPage(1) }} placeholder="Cari barang..." />
         </div>
       </div>
 
@@ -285,14 +309,14 @@ export default function PersediaanClient({
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {paginatedData.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-[var(--color-ink-400)]">
                     {data.length === 0 ? 'Belum ada data persediaan' : 'Tidak ada hasil pencarian'}
                   </td>
                 </tr>
               )}
-              {filtered.map((row) => (
+              {paginatedData.map((row) => (
                 <tr key={row.id} className="border-b border-[var(--color-surface-50)] hover:bg-[var(--color-surface-100)]">
                   <td className="px-4 py-3">{formatDate(row.tanggal)}</td>
                   <td className="px-4 py-3">
@@ -334,6 +358,13 @@ export default function PersediaanClient({
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
 
       <Modal

@@ -53,7 +53,7 @@ function formatDate(iso: string): string {
   })
 }
 
-const ITEMS_PER_PAGE = 15
+const ITEMS_PER_PAGE = 50
 
 export default function KeuanganClient({ initialData, kategoriList }: KeuanganClientProps) {
   const [data, setData] = useState<Keuangan[]>(initialData)
@@ -62,6 +62,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
   const [search, setSearch] = useState('')
   const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
   const [currentPage, setCurrentPage] = useState(1)
+  const [jenisFilter, setJenisFilter] = useState<string>('Semua')
   const [loading, setLoading] = useState(false)
   const [linkNota, setLinkNota] = useState<string | null>(null)
   const [currentJenis, setCurrentJenis] = useState<'Debit' | 'Kredit'>('Debit')
@@ -121,13 +122,14 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
     const q = search.toLowerCase()
     return data.filter((d) => {
       if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
+      if (jenisFilter !== 'Semua' && d.jenis_transaksi !== jenisFilter) return false
       return (
         (d.kategori ?? '').toLowerCase().includes(q) ||
         (d.keterangan ?? '').toLowerCase().includes(q) ||
         d.jenis_transaksi.toLowerCase().includes(q)
       )
     })
-  }, [data, search, tahunFilter])
+  }, [data, search, tahunFilter, jenisFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
   const safePage = Math.min(currentPage, totalPages)
@@ -236,6 +238,15 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
             {[2024, 2025, 2026, 2027].map((y) => (
               <option key={y} value={y}>TA {y}</option>
             ))}
+          </select>
+          <select
+            value={jenisFilter}
+            onChange={(e) => { setJenisFilter(e.target.value); setCurrentPage(1) }}
+            className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+          >
+            <option value="Semua">Semua Jenis</option>
+            <option value="Debit">Debit</option>
+            <option value="Kredit">Kredit</option>
           </select>
           <div className="w-full sm:w-64">
             <SearchInput

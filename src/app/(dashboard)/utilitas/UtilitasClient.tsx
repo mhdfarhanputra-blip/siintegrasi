@@ -20,6 +20,7 @@ import {
 import Modal from '@/components/Modal'
 import FileUpload from '@/components/FileUpload'
 import SearchInput from '@/components/SearchInput'
+import Pagination from '@/components/Pagination'
 import { useRealtime } from '@/lib/useRealtime'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 import { safeHttpUrl } from '@/lib/safeUrl'
@@ -81,6 +82,8 @@ const REVIEW_STYLE: Record<string, { label: string; icon: React.ReactNode; tone:
   CATATAN: { label: 'Ada Catatan', icon: <AlertCircle size={14} />, tone: 'text-orange-700 bg-orange-50 border border-orange-200' },
 }
 
+const ITEMS_PER_PAGE = 50
+
 const formatDate = (d: string) =>
   new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -104,6 +107,8 @@ export default function UtilitasClient({
   const [selectedId, setSelectedId] = useState<string | null>(initialData[0]?.id ?? null)
   const [search, setSearch] = useState('')
   const [tahunFilter, setTahunFilter] = useState<number>(new Date().getFullYear())
+  const [statusFilter, setStatusFilter] = useState<string>('Semua')
+  const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [noteTarget, setNoteTarget] = useState<{ row: UtilitasRow; op: Operator } | null>(null)
   const [kronologisRow, setKronologisRow] = useState<UtilitasRow | null>(null)
@@ -120,15 +125,25 @@ export default function UtilitasClient({
   const isPengusul = userRole === 'Pengusul'
   const canCreate = userRole === 'Pengusul' || userRole === 'Admin'
 
-  const filtered = data.filter((d) => {
-    if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
-    const q = search.toLowerCase()
-    return (
-      d.jenis_pekerjaan.toLowerCase().includes(q) ||
-      (d.instansi ?? '').toLowerCase().includes(q) ||
-      (d.lokasi ?? '').toLowerCase().includes(q)
-    )
-  })
+  const filtered = useMemo(() => {
+    return data.filter((d) => {
+      if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
+      if (statusFilter !== 'Semua' && d.status !== statusFilter.toUpperCase()) return false
+      const q = search.toLowerCase()
+      return (
+        d.jenis_pekerjaan.toLowerCase().includes(q) ||
+        (d.instansi ?? '').toLowerCase().includes(q) ||
+        (d.lokasi ?? '').toLowerCase().includes(q)
+      )
+    })
+  }, [data, search, tahunFilter, statusFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedData = filtered.slice(
+    (safePage - 1) * ITEMS_PER_PAGE,
+    safePage * ITEMS_PER_PAGE
+  )
 
   const selected = data.find((d) => d.id === selectedId) ?? null
   const selectedTransmital = transmital.filter((t) => t.utilitas_id === selectedId)
@@ -380,15 +395,27 @@ export default function UtilitasClient({
       <div className="flex flex-wrap items-center gap-3">
         <select
           value={tahunFilter}
-          onChange={(e) => setTahunFilter(Number(e.target.value))}
+          onChange={(e) => { setTahunFilter(Number(e.target.value)); setCurrentPage(1) }}
           className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
         >
           {[2024, 2025, 2026, 2027].map((y) => (
             <option key={y} value={y}>TA {y}</option>
           ))}
         </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }}
+          className="border border-[var(--color-surface-200)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-500)]/50"
+        >
+          <option value="Semua">Semua Status</option>
+          <option value="Diajukan">Diajukan</option>
+          <option value="Pemeriksaan">Pemeriksaan</option>
+          <option value="Revisi">Revisi</option>
+          <option value="Diterima">Diterima</option>
+          <option value="Ditolak">Ditolak</option>
+        </select>
         <div className="w-full sm:max-w-xs">
-          <SearchInput value={search} onChange={setSearch} placeholder="Cari permohonan..." />
+          <SearchInput value={search} onChange={(v) => { setSearch(v); setCurrentPage(1) }} placeholder="Cari permohonan..." />
         </div>
         <p className="text-[11px] text-[var(--color-ink-500)]">
           Menampilkan {filtered.length} dari {data.length} permohonan
@@ -406,24 +433,27 @@ export default function UtilitasClient({
                 : 'Tidak ada hasil pencarian.'}
             </div>
           ) : (
-            filtered.map((row) => (
-              <UtilitasCard
-                key={row.id}
-                row={row}
-                selected={selectedId === row.id}
-                isOwner={row.input_by === currentUserId}
-                userRole={userRole}
-                onSelect={() => setSelectedId(row.id)}
-                onEdit={() => openEdit(row)}
-                onDelete={() => handleDelete(row)}
-                onMulaiPemeriksaan={() => handleMulaiPemeriksaan(row)}
-                onReviewOK={(op) => handleReviewOK(row, op)}
-                onOpenNote={(op) => setNoteTarget({ row, op })}
-                onResubmit={() => handleResubmitRevisi(row)}
-                onTolakFinal={() => handleTolakFinal(row)}
-                onShowKronologis={() => setKronologisRow(row)}
-              />
-            ))
+            <>
+              {paginatedData.map((row) => (
+                <UtilitasCard
+                  key={row.id}
+                  row={row}
+                  selected={selectedId === row.id}
+                  isOwner={row.input_by === currentUserId}
+                  userRole={userRole}
+                  onSelect={() => setSelectedId(row.id)}
+                  onEdit={() => openEdit(row)}
+                  onDelete={() => handleDelete(row)}
+                  onMulaiPemeriksaan={() => handleMulaiPemeriksaan(row)}
+                  onReviewOK={(op) => handleReviewOK(row, op)}
+                  onOpenNote={(op) => setNoteTarget({ row, op })}
+                  onResubmit={() => handleResubmitRevisi(row)}
+                  onTolakFinal={() => handleTolakFinal(row)}
+                  onShowKronologis={() => setKronologisRow(row)}
+                />
+              ))}
+              <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </>
           )}
         </div>
 
