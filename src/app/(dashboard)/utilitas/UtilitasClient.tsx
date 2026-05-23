@@ -112,6 +112,8 @@ export default function UtilitasClient({
   const [loading, setLoading] = useState(false)
   const [noteTarget, setNoteTarget] = useState<{ row: UtilitasRow; op: Operator } | null>(null)
   const [kronologisRow, setKronologisRow] = useState<UtilitasRow | null>(null)
+  const [revisiUploadTarget, setRevisiUploadTarget] = useState<UtilitasRow | null>(null)
+  const [linkRevisi, setLinkRevisi] = useState<string | null>(null)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -299,6 +301,7 @@ export default function UtilitasClient({
       const parts: string[] = []
       parts.push(`Satker: ${row.review_satker === 'OK' ? 'OK' : row.review_satker_catatan || 'Catatan'}`)
       parts.push(`Perencanaan: ${row.review_perencanaan === 'OK' ? 'OK' : row.review_perencanaan_catatan || 'Catatan'}`)
+      if (linkRevisi) parts.push(`Dokumen perbaikan: ${linkRevisi}`)
       const ringkasan = parts.join(' | ')
 
       // Insert record transmital untuk mencatat pengajuan ulang
@@ -447,7 +450,7 @@ export default function UtilitasClient({
                   onMulaiPemeriksaan={() => handleMulaiPemeriksaan(row)}
                   onReviewOK={(op) => handleReviewOK(row, op)}
                   onOpenNote={(op) => setNoteTarget({ row, op })}
-                  onResubmit={() => handleResubmitRevisi(row)}
+                  onResubmit={() => setRevisiUploadTarget(row)}
                   onTolakFinal={() => handleTolakFinal(row)}
                   onShowKronologis={() => setKronologisRow(row)}
                 />
@@ -496,6 +499,48 @@ export default function UtilitasClient({
         transmital={kronologisRow ? transmital.filter((t) => t.utilitas_id === kronologisRow.id) : []}
         onClose={() => setKronologisRow(null)}
       />
+
+      <Modal
+        isOpen={revisiUploadTarget !== null}
+        onClose={() => { setRevisiUploadTarget(null); setLinkRevisi(null) }}
+        title="Kirim Ulang Permohonan"
+      >
+        <div className="space-y-4">
+          <p className="text-[12.5px] text-[var(--color-ink-500)]">
+            Unggah dokumen perbaikan sebelum mengirim ulang permohonan.
+          </p>
+          <FileUpload
+            label="Dokumen Perbaikan"
+            value={linkRevisi}
+            onChange={setLinkRevisi}
+            helperText="Unggah file perbaikan sesuai catatan operator."
+            id="revisi-upload"
+            modul="utilitas"
+          />
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => { setRevisiUploadTarget(null); setLinkRevisi(null) }}
+              className="border border-[var(--color-surface-200)] px-4 py-2 rounded-lg hover:bg-[var(--color-surface-100)] transition text-sm"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (revisiUploadTarget) {
+                  await handleResubmitRevisi(revisiUploadTarget)
+                }
+                setRevisiUploadTarget(null)
+                setLinkRevisi(null)
+              }}
+              className="bg-[var(--color-gold-500)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-gold-600)] transition text-sm"
+            >
+              Kirim Ulang
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

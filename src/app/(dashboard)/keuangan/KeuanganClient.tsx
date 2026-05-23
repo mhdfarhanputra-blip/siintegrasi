@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Wallet, Plus, Trash2, Download, Pencil, Receipt } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import Modal from '@/components/Modal'
 import SearchInput from '@/components/SearchInput'
 import Pagination from '@/components/Pagination'
@@ -269,6 +270,7 @@ export default function KeuanganClient({ initialData, kategoriList }: KeuanganCl
       ) : (
         <>
           <SummaryCards totalDebit={totalDebit} totalKredit={totalKredit} saldo={saldo} />
+          <MonthlyTrendChart filtered={filtered} />
           <TransaksiTable data={paginatedData} onDelete={handleDelete} onEdit={openEdit} />
           <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </>
@@ -424,6 +426,42 @@ function SummaryCards({
         <p className="text-xs text-[var(--color-ink-500)] uppercase font-semibold">Saldo</p>
         <p className="text-lg font-bold text-[var(--color-navy-900)] mt-1">{formatRupiah(saldo)}</p>
       </div>
+    </div>
+  )
+}
+
+function MonthlyTrendChart({ filtered }: { filtered: Keuangan[] }) {
+  const monthlyData = useMemo(() => {
+    const months: Record<string, { bulan: string; debit: number; kredit: number }> = {}
+    filtered.forEach((d) => {
+      const date = new Date(d.tanggal)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const label = date.toLocaleDateString('id-ID', { month: 'short' })
+      if (!months[key]) months[key] = { bulan: label, debit: 0, kredit: 0 }
+      if (d.jenis_transaksi === 'Debit') months[key].debit += d.nominal
+      else months[key].kredit += d.nominal
+    })
+    return Object.entries(months)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, v]) => v)
+      .slice(-12)
+  }, [filtered])
+
+  if (monthlyData.length <= 1) return null
+
+  return (
+    <div className="bg-white border border-[var(--color-surface-200)] rounded-xl p-5">
+      <h3 className="text-sm font-semibold text-[var(--color-navy-900)] mb-4">Tren Bulanan</h3>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={monthlyData}>
+          <XAxis dataKey="bulan" tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} />
+          <Tooltip formatter={(v) => typeof v === 'number' ? formatRupiah(v) : String(v)} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Bar dataKey="debit" name="Debit" fill="#059669" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="kredit" name="Kredit" fill="#dc2626" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   )
 }

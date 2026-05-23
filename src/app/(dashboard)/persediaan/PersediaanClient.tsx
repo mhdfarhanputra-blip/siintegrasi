@@ -146,6 +146,12 @@ export default function PersediaanClient({
     return latest
   }, [data, tahunFilter])
 
+  const stokKritis = useMemo(() => {
+    return [...latestByItem.values()].filter(
+      (r) => r.stok_minimum && r.stok_minimum > 0 && r.stok_saldo <= r.stok_minimum
+    )
+  }, [latestByItem])
+
   const totalSaldo = [...latestByItem.values()].reduce((sum, row) => sum + (row.stok_saldo ?? 0), 0)
 
   const openAdd = () => {
@@ -271,6 +277,19 @@ export default function PersediaanClient({
           <p className="text-xl font-bold text-[var(--color-navy-900)]">{totalSaldo}</p>
         </div>
       </div>
+
+      {stokKritis.length > 0 && (
+        <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+          <p className="text-sm font-semibold text-orange-800 mb-2">⚠️ {stokKritis.length} item stok kritis</p>
+          <div className="flex flex-wrap gap-2">
+            {stokKritis.map((item) => (
+              <span key={item.id} className="px-2 py-1 bg-white border border-orange-200 rounded-lg text-[11px] text-orange-700">
+                {item.nama_barang} (saldo: {item.stok_saldo}/{item.stok_minimum})
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select

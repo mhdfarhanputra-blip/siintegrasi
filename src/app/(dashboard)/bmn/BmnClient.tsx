@@ -46,6 +46,7 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
   const [loading, setLoading] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
   const [linkFoto, setLinkFoto] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'tabel'>('tabel')
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -246,6 +247,10 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex items-center gap-1 border border-[var(--color-surface-200)] rounded-lg p-0.5">
+          <button onClick={() => setViewMode('grid')} className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition ${viewMode === 'grid' ? 'bg-[var(--color-navy-900)] text-white' : 'text-[var(--color-ink-500)] hover:bg-[var(--color-surface-100)]'}`}>Grid</button>
+          <button onClick={() => setViewMode('tabel')} className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition ${viewMode === 'tabel' ? 'bg-[var(--color-navy-900)] text-white' : 'text-[var(--color-ink-500)] hover:bg-[var(--color-surface-100)]'}`}>Tabel</button>
+        </div>
         <select
           value={tahunFilter}
           onChange={(e) => { setTahunFilter(Number(e.target.value)); setCurrentPage(1) }}
@@ -286,6 +291,59 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
         <div className="text-center py-12 text-[var(--color-ink-400)]">
           {data.length === 0 ? 'Belum ada data aset BMN' : 'Tidak ada hasil pencarian'}
         </div>
+      ) : viewMode === 'tabel' ? (
+        <>
+          <div className="bg-white rounded-xl shadow-sm border border-[var(--color-surface-200)] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[var(--color-surface-50)] border-b border-[var(--color-surface-200)]">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-[var(--color-ink-500)]">Kode Aset</th>
+                    <th className="text-left px-4 py-3 font-medium text-[var(--color-ink-500)]">Nama Aset</th>
+                    <th className="text-left px-4 py-3 font-medium text-[var(--color-ink-500)]">Kondisi</th>
+                    <th className="text-right px-4 py-3 font-medium text-[var(--color-ink-500)]">Nilai</th>
+                    <th className="text-left px-4 py-3 font-medium text-[var(--color-ink-500)]">Status</th>
+                    <th className="text-center px-4 py-3 font-medium text-[var(--color-ink-500)]">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-surface-100)]">
+                  {paginatedData.map((row) => (
+                    <tr key={row.id} className="hover:bg-[var(--color-surface-100)]">
+                      <td className="px-4 py-3 font-mono text-xs text-[var(--color-ink-500)]">{row.kode_aset}</td>
+                      <td className="px-4 py-3 font-medium text-[var(--color-navy-900)]">{row.nama_aset}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${KONDISI_COLOR[row.kondisi] || 'bg-[var(--color-surface-50)] text-[var(--color-ink-700)]'}`}>
+                          {row.kondisi}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm">{formatCurrency(row.nilai_aset)}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                          {row.status_penggunaan}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <button onClick={() => openEdit(row)} className="text-[var(--color-ink-400)] hover:text-[var(--color-gold-500)] transition" title="Ubah">
+                            <Pencil size={16} />
+                          </button>
+                          <button onClick={() => handleDelete(row.id)} className="text-red-400 hover:text-red-600 transition" title="Hapus">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </div>
+          )}
+        </>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
