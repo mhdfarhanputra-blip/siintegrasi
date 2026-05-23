@@ -21,7 +21,7 @@ const formatDate = (d: string) =>
 async function getMetrics() {
   const supabase = await createServerSupabase()
   const me = await getCurrentUser()
-  const [kC, pC, bC, uO, kS, bS, rK, rU, sK, uR, pP, mS] = await Promise.all([
+  const [kC, pC, bC, uO, kS, bS, rK, rU, sK, uR, pP, mS, bKondisi, uStatus] = await Promise.all([
     supabase.from('keuangan').select('id', { count: 'exact', head: true }),
     supabase.from('persediaan').select('id', { count: 'exact', head: true }),
     supabase.from('bmn').select('id', { count: 'exact', head: true }),
@@ -34,6 +34,8 @@ async function getMetrics() {
     supabase.from('utilitas').select('id', { count: 'exact', head: true }).eq('status', 'PEMERIKSAAN'),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'Pending'),
     me?.id ? supabase.from('utilitas').select('id', { count: 'exact', head: true }).eq('input_by', me.id).in('status', ['DIAJUKAN','PEMERIKSAAN','REVISI']) : Promise.resolve({ count: 0 }),
+    supabase.from('bmn').select('kondisi, nilai_aset'),
+    supabase.from('utilitas').select('status'),
   ])
   type KR = { jenis_transaksi: 'Debit' | 'Kredit'; nominal: number }
   const txs = (kS.data ?? []) as KR[]
@@ -42,6 +44,30 @@ async function getMetrics() {
   const totalBmn = ((bS.data ?? []) as { nilai_aset: number }[]).reduce((s, r) => s + (r.nilai_aset ?? 0), 0)
   const stokKritisCount = ((sK.data ?? []) as { stok_saldo: number; stok_minimum: number }[]).filter(s => (s.stok_saldo ?? 0) <= (s.stok_minimum ?? 0)).length
   const realTop = realisasiRaw[0] as { pagu: number; realisasi_sd: number; sisa: number; persen: number }
+
+  // BMN per kondisi
+  type BmnKondisi = { kondisi: string; nilai_aset: number }
+  const bmnRows = (bKondisi.data ?? []) as BmnKondisi[]
+  const bmnPerKondisi = { baik: 0, rusakRingan: 0, rusakBerat: 0, baikNilai: 0, rusakRinganNilai: 0, rusakBeratNilai: 0 }
+  bmnRows.forEach((r) => {
+    const nilai = r.nilai_aset ?? 0
+    if (r.kondisi === 'Baik') { bmnPerKondisi.baik++; bmnPerKondisi.baikNilai += nilai }
+    else if (r.kondisi === 'Rusak Ringan') { bmnPerKondisi.rusakRingan++; bmnPerKondisi.rusakRinganNilai += nilai }
+    else if (r.kondisi === 'Rusak Berat') { bmnPerKondisi.rusakBerat++; bmnPerKondisi.rusakBeratNilai += nilai }
+  })
+
+  // Utilitas per status
+  type UStatus = { status: string }
+  const utilitasRows = (uStatus.data ?? []) as UStatus[]
+  const utilitasPerStatus = { diajukan: 0, pemeriksaan: 0, revisi: 0, diterima: 0, ditolak: 0 }
+  utilitasRows.forEach((r) => {
+    if (r.status === 'DIAJUKAN') utilitasPerStatus.diajukan++
+    else if (r.status === 'PEMERIKSAAN') utilitasPerStatus.pemeriksaan++
+    else if (r.status === 'REVISI') utilitasPerStatus.revisi++
+    else if (r.status === 'DITERIMA') utilitasPerStatus.diterima++
+    else if (r.status === 'DITOLAK') utilitasPerStatus.ditolak++
+  })
+
   return {
     me, totalKeuangan: kC.count ?? 0, totalPersediaan: pC.count ?? 0, totalBmn: bC.count ?? 0,
     utilitasOpen: uO.count ?? 0, totalDebit, totalKredit, saldo: totalDebit - totalKredit, totalBmnValue: totalBmn,
@@ -49,6 +75,7 @@ async function getMetrics() {
     stokKritisCount, utilitasReviewCount: uR.count ?? 0,
     pendaftarPendingCount: pP.count ?? 0, mySubmissionPendingCount: mS.count ?? 0,
     pagu: realTop?.pagu ?? 0, realisasi: realTop?.realisasi_sd ?? 0, sisaAnggaran: realTop?.sisa ?? 0, persenRealisasi: realTop?.persen ?? 0,
+    bmnPerKondisi, utilitasPerStatus,
   }
 }
 
@@ -134,6 +161,43 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {/* BMN & Utilitas Analytics */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* BMN per Kondisi */}
+        <div className="card-base p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-[14px] font-semibold text-[var(--color-navy-900)] font-display">Kondisi Aset BMN</h3>
+              <p className="text-[11px] text-[var(--color-ink-500)]">{m.bmnPerKondisi.baik + m.bmnPerKondisi.rusakRingan + m.bmnPerKondisi.rusakBerat} aset tercatat</p>
+            </div>
+            <Link href="/bmn" className="text-[11px] text-[var(--color-gold-600)] hover:text-[var(--color-gold-700)] font-medium flex items-center gap-1">Detail <ArrowUpRight size={12} /></Link>
+          </div>
+          <div className="space-y-3">
+            <ConditionBar label="Baik" count={m.bmnPerKondisi.baik} total={m.bmnPerKondisi.baik + m.bmnPerKondisi.rusakRingan + m.bmnPerKondisi.rusakBerat} value={m.bmnPerKondisi.baikNilai} color="bg-emerald-500" />
+            <ConditionBar label="Rusak Ringan" count={m.bmnPerKondisi.rusakRingan} total={m.bmnPerKondisi.baik + m.bmnPerKondisi.rusakRingan + m.bmnPerKondisi.rusakBerat} value={m.bmnPerKondisi.rusakRinganNilai} color="bg-amber-500" />
+            <ConditionBar label="Rusak Berat" count={m.bmnPerKondisi.rusakBerat} total={m.bmnPerKondisi.baik + m.bmnPerKondisi.rusakRingan + m.bmnPerKondisi.rusakBerat} value={m.bmnPerKondisi.rusakBeratNilai} color="bg-rose-500" />
+          </div>
+        </div>
+
+        {/* Utilitas per Status */}
+        <div className="card-base p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-[14px] font-semibold text-[var(--color-navy-900)] font-display">Status Utilitas</h3>
+              <p className="text-[11px] text-[var(--color-ink-500)]">Distribusi permohonan</p>
+            </div>
+            <Link href="/utilitas" className="text-[11px] text-[var(--color-gold-600)] hover:text-[var(--color-gold-700)] font-medium flex items-center gap-1">Detail <ArrowUpRight size={12} /></Link>
+          </div>
+          <div className="space-y-2">
+            <StatusRow label="Diajukan" count={m.utilitasPerStatus.diajukan} color="bg-sky-500" />
+            <StatusRow label="Pemeriksaan" count={m.utilitasPerStatus.pemeriksaan} color="bg-amber-500" />
+            <StatusRow label="Revisi" count={m.utilitasPerStatus.revisi} color="bg-orange-500" />
+            <StatusRow label="Diterima" count={m.utilitasPerStatus.diterima} color="bg-emerald-500" />
+            <StatusRow label="Ditolak" count={m.utilitasPerStatus.ditolak} color="bg-rose-500" />
+          </div>
+        </div>
+      </section>
+
       {/* Activity + Quick Actions */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 card-base p-5">
@@ -205,6 +269,31 @@ function QuickLink({ href, icon, label, color }: { href: string; icon: React.Rea
       <div className={`w-7 h-7 rounded-lg ${color} flex items-center justify-center`}>{icon}</div>
       {label}
     </Link>
+  )
+}
+
+function ConditionBar({ label, count, total, value, color }: { label: string; count: number; total: number; value: number; color: string }) {
+  const pct = total > 0 ? (count / total) * 100 : 0
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[11.5px]">
+        <span className="font-medium text-[var(--color-navy-900)]">{label}</span>
+        <span className="text-[var(--color-ink-500)]">{count} unit · {formatShort(value)}</span>
+      </div>
+      <div className="h-2 rounded-full bg-[var(--color-surface-100)] overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function StatusRow({ label, count, color }: { label: string; count: number; color: string }) {
+  return (
+    <div className="flex items-center gap-2.5 py-1">
+      <div className={`w-2.5 h-2.5 rounded-full ${color} flex-shrink-0`} />
+      <span className="text-[12px] text-[var(--color-ink-700)] flex-1">{label}</span>
+      <span className="text-[12px] font-semibold text-[var(--color-navy-900)]">{count}</span>
+    </div>
   )
 }
 
