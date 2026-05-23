@@ -9,6 +9,7 @@ import FileUpload from '@/components/FileUpload'
 import SearchInput from '@/components/SearchInput'
 import Pagination from '@/components/Pagination'
 import { useRealtime } from '@/lib/useRealtime'
+import { useDebounce } from '@/lib/useDebounce'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
 interface BmnRow {
@@ -90,11 +91,13 @@ export default function BmnClient({ initialData }: { initialData: BmnRow[] }) {
   // Reset page when filters change
   useEffect(() => { setCurrentPage(1) }, [tahunFilter, kondisiFilter, statusFilter, search])
 
+  const debouncedSearch = useDebounce(search)
+
   const filtered = data.filter((d) => {
     if (d.tahun_pencatatan !== tahunFilter) return false
     if (kondisiFilter !== 'Semua' && d.kondisi !== kondisiFilter) return false
     if (statusFilter !== 'Semua' && d.status_penggunaan !== statusFilter) return false
-    const q = search.toLowerCase()
+    const q = debouncedSearch.toLowerCase()
     return (
       d.nama_aset.toLowerCase().includes(q) ||
       d.kode_aset.toLowerCase().includes(q) ||

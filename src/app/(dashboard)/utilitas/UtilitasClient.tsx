@@ -1252,7 +1252,14 @@ function KronologisModal({
         )}
       </div>
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="px-4 py-2 rounded-lg text-sm border border-[var(--color-surface-200)] hover:bg-[var(--color-surface-100)] transition text-[var(--color-ink-700)]"
+        >
+          Cetak
+        </button>
         <button
           type="button"
           onClick={onClose}

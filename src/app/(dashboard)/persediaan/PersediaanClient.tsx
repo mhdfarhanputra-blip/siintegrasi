@@ -10,6 +10,7 @@ import Pagination from '@/components/Pagination'
 import FileUpload from '@/components/FileUpload'
 import Combobox, { type ComboboxOption } from '@/components/Combobox'
 import { useRealtime } from '@/lib/useRealtime'
+import { useDebounce } from '@/lib/useDebounce'
 import { showError, showSuccess, confirmActionAsync } from '@/lib/toast'
 
 interface PersediaanRow {
@@ -111,8 +112,10 @@ export default function PersediaanClient({
     }
   }
 
+  const debouncedSearch = useDebounce(search)
+
   const filtered = useMemo(() => {
-    const q = search.toLowerCase()
+    const q = debouncedSearch.toLowerCase()
     return data.filter((d) => {
       if (d.tahun_anggaran && d.tahun_anggaran !== tahunFilter) return false
       if (jenisFilter !== 'Semua' && d.jenis !== jenisFilter) return false
@@ -122,7 +125,7 @@ export default function PersediaanClient({
         d.jenis.toLowerCase().includes(q)
       )
     })
-  }, [data, search, tahunFilter, jenisFilter])
+  }, [data, debouncedSearch, tahunFilter, jenisFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
   const safePage = Math.min(currentPage, totalPages)

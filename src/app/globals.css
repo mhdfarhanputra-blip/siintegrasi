@@ -265,10 +265,13 @@ button:disabled,
 
 @media print {
   body { background: white !important; }
-  .no-print, aside, header, .fixed, [role="dialog"] { display: none !important; }
+  .no-print, aside, header, nav { display: none !important; }
+  [data-radix-dialog-overlay] { background: white !important; backdrop-filter: none !important; }
+  [data-radix-dialog-content] { position: static !important; transform: none !important; max-width: 100% !important; width: 100% !important; box-shadow: none !important; }
   .card-base { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
   main { padding: 0 !important; }
   table { font-size: 10px !important; }
+  button { display: none !important; }
   @page { margin: 1.5cm; }
 }
 
